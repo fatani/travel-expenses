@@ -11,9 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:travel_expenses/app/app.dart';
 
 void main() {
-  testWidgets('App shows trips placeholder', (WidgetTester tester) async {
+  testWidgets('App shows trips list', (WidgetTester tester) async {
     await tester.pumpWidget(const ProviderScope(child: App()));
 
-    expect(find.text('واجهة مؤقتة — سنبني الرحلات لاحقًا'), findsOneWidget);
+    expect(find.text('الرحلات'), findsOneWidget);
   });
 }
