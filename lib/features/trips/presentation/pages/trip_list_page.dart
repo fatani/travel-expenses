@@ -49,11 +49,7 @@ class TripListPage extends ConsumerWidget {
                     ? '${trip.startDate?.day}/${trip.startDate?.month}' 
                     : '',
                 ),
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('قريبًا: تفاصيل الرحلة')),
-                  );
-                },
+                onTap: () => context.go('/trips/${trip.id}'),
               );
             },
           );

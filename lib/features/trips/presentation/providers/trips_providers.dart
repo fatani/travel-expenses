@@ -18,6 +18,19 @@ final tripsStreamProvider = StreamProvider<List<Trip>>((ref) {
   return repository.watchAllTrips();
 });
 
+/// Stream provider to watch a single trip by id
+final tripByIdProvider = StreamProvider.family<Trip?, String>((ref, tripId) {
+  final repository = ref.watch(repositoryProvider);
+  return repository.watchAllTrips().map((trips) {
+    for (final trip in trips) {
+      if (trip.id == tripId) {
+        return trip;
+      }
+    }
+    return null;
+  });
+});
+
 /// Notifier for adding new trips
 class AddTripNotifier extends StateNotifier<AsyncValue<void>> {
   final AppRepository repository;
