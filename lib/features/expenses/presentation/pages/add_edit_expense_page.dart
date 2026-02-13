@@ -27,15 +27,27 @@ class AddEditExpensePage extends ConsumerStatefulWidget {
 class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   static const String _paymentPrefKey = 'last_payment_method_type';
 
+  final _formKey = GlobalKey<FormState>();
+  final _amountFieldKey = GlobalKey();
+  final _categoryFieldKey = GlobalKey();
+  final _merchantFieldKey = GlobalKey();
+  final ScrollController _scrollController = ScrollController();
+
   late TextEditingController _amountController;
   late TextEditingController _noteController;
   late TextEditingController _merchantController;
   late TextEditingController _locationController;
+  late TextEditingController _paymentLabelController;
   late String _selectedCategory;
   late String _selectedCurrency;
   late String _selectedPaymentMethod;
+  String? _selectedPaymentBrand;
   late DateTime _selectedDate;
   String? _newExpenseId; // Track newly created expense
+
+  final FocusNode _amountFocusNode = FocusNode();
+  final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _merchantFocusNode = FocusNode();
 
   final List<String> _categories = [
     'الطعام',
@@ -52,6 +64,21 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     'other': 'أخرى',
   };
 
+  final Map<String, String> _cardBrands = {
+    'visa': 'Visa',
+    'mastercard': 'Mastercard',
+    'mada': 'Mada',
+    'amex': 'Amex',
+    'other': 'Other',
+  };
+
+  final Map<String, String> _walletBrands = {
+    'apple_pay': 'Apple Pay',
+    'google_pay': 'Google Pay',
+    'stc_pay': 'STC Pay',
+    'other': 'Other',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -63,20 +90,30 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _noteController = TextEditingController(text: widget.expense!.note ?? '');
       _merchantController = TextEditingController(text: widget.expense!.merchant);
       _locationController = TextEditingController(text: widget.expense!.locationText ?? '');
+      _paymentLabelController = TextEditingController(
+        text: widget.expense!.paymentMethodLabel ?? '',
+      );
       _selectedCategory = widget.expense!.category;
       _selectedCurrency = widget.expense!.currency;
       _selectedPaymentMethod = widget.expense!.paymentMethod;
+      _selectedPaymentBrand = widget.expense!.paymentMethodBrand;
       _selectedDate = widget.expense!.date;
     } else {
       _amountController = TextEditingController();
       _noteController = TextEditingController();
       _merchantController = TextEditingController();
       _locationController = TextEditingController();
+      _paymentLabelController = TextEditingController();
       _selectedCategory = _categories.first;
       _selectedCurrency = widget.tripCurrency;
       _selectedPaymentMethod = _paymentMethods.keys.first;
+      _selectedPaymentBrand = null;
       _selectedDate = DateTime.now();
       _loadPaymentMethodPreference();
+    }
+
+    if (!_shouldShowPaymentDetails(_selectedPaymentMethod)) {
+      _resetPaymentDetails();
     }
   }
 
@@ -86,6 +123,11 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     _noteController.dispose();
     _merchantController.dispose();
     _locationController.dispose();
+    _paymentLabelController.dispose();
+    _amountFocusNode.dispose();
+    _categoryFocusNode.dispose();
+    _merchantFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -95,9 +137,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     if (!mounted) {
       return;
     }
-    setState(() {
-      _selectedPaymentMethod = stored;
-    });
+    _setPaymentMethodType(stored, persist: false);
   }
 
   Future<void> _persistPaymentMethod(String value) async {
@@ -105,43 +145,100 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     await prefs.setString(_paymentPrefKey, value);
   }
 
-  void _onPaymentMethodChanged(String value) {
-    setState(() {
-      _selectedPaymentMethod = value;
-    });
-    _persistPaymentMethod(value);
+  bool _shouldShowPaymentDetails(String type) {
+    return type == 'card' || type == 'wallet';
   }
 
-  void _addOrUpdateExpense() async {
-    // Validation
-    if (_amountController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال المبلغ')),
-      );
+  void _resetPaymentDetails() {
+    _selectedPaymentBrand = null;
+    _paymentLabelController.text = '';
+  }
+
+  void _setPaymentMethodType(String value, {bool persist = true}) {
+    setState(() {
+      _selectedPaymentMethod = value;
+      if (!_shouldShowPaymentDetails(value)) {
+        _resetPaymentDetails();
+      } else {
+        final brands = _getBrandOptions();
+        if (_selectedPaymentBrand != null && !brands.containsKey(_selectedPaymentBrand)) {
+          _selectedPaymentBrand = null;
+        }
+      }
+    });
+    if (persist) {
+      _persistPaymentMethod(value);
+    }
+  }
+
+  void _onPaymentMethodChanged(String value) {
+    _setPaymentMethodType(value);
+  }
+
+  Map<String, String> _getBrandOptions() {
+    if (_selectedPaymentMethod == 'card') {
+      return _cardBrands;
+    }
+    if (_selectedPaymentMethod == 'wallet') {
+      return _walletBrands;
+    }
+    return const {};
+  }
+
+  Future<void> _focusAndScroll(GlobalKey targetKey, FocusNode focusNode) async {
+    focusNode.requestFocus();
+    final targetContext = targetKey.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 250),
+      alignment: 0.2,
+    );
+  }
+
+  Future<void> _focusFirstInvalid() async {
+    final amount = double.tryParse(_amountController.text);
+    if (_amountController.text.trim().isEmpty || amount == null || amount <= 0) {
+      await _focusAndScroll(_amountFieldKey, _amountFocusNode);
       return;
     }
 
-    final amount = double.tryParse(_amountController.text);
-    if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال مبلغ صحيح')),
-      );
+    if (_selectedCategory.trim().isEmpty) {
+      await _focusAndScroll(_categoryFieldKey, _categoryFocusNode);
       return;
     }
 
     if (_merchantController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال مكان الشراء')),
-      );
+      await _focusAndScroll(_merchantFieldKey, _merchantFocusNode);
+      return;
+    }
+  }
+
+  void _addOrUpdateExpense() async {
+    final formState = _formKey.currentState;
+    if (formState == null) {
       return;
     }
 
-    if (_selectedPaymentMethod.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى اختيار طريقة الدفع')),
-      );
+    if (!formState.validate()) {
+      await _focusFirstInvalid();
       return;
     }
+
+    final amount = double.tryParse(_amountController.text) ?? 0;
+
+    final shouldPersistPaymentDetails =
+      _shouldShowPaymentDetails(_selectedPaymentMethod);
+    final paymentMethodBrand = shouldPersistPaymentDetails
+      ? _selectedPaymentBrand
+      : null;
+    final paymentMethodLabel = shouldPersistPaymentDetails
+      ? _paymentLabelController.text.trim().isEmpty
+        ? null
+        : _paymentLabelController.text.trim()
+      : null;
 
     try {
       if (widget.expense != null) {
@@ -154,6 +251,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
           note: _noteController.text.isEmpty ? null : _noteController.text,
           merchant: _merchantController.text.trim(),
           paymentMethod: _selectedPaymentMethod,
+          paymentMethodBrand: paymentMethodBrand,
+          paymentMethodLabel: paymentMethodLabel,
           locationText: _locationController.text.trim().isEmpty
               ? null
               : _locationController.text.trim(),
@@ -178,6 +277,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               note: _noteController.text.isEmpty ? null : _noteController.text,
               merchant: _merchantController.text.trim(),
               paymentMethod: _selectedPaymentMethod,
+              paymentMethodBrand: paymentMethodBrand,
+              paymentMethodLabel: paymentMethodLabel,
               locationText: _locationController.text.trim().isEmpty
                   ? null
                   : _locationController.text.trim(),
@@ -223,239 +324,303 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     final isEditing = widget.expense != null;
 
     return SingleChildScrollView(
+      controller: _scrollController,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title
-            Text(
-              isEditing ? 'تعديل مصروف' : 'إضافة مصروف',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 24),
-
-            // Amount field
-            TextFormField(
-              controller: _amountController,
-              decoration: const InputDecoration(
-                labelText: 'المبلغ',
-                hintText: 'أدخل المبلغ',
-                prefixIcon: Icon(Icons.attach_money),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              Text(
+                isEditing ? 'تعديل مصروف' : 'إضافة مصروف',
+                style: Theme.of(context).textTheme.headlineSmall,
               ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            // Currency field
-            DropdownButtonFormField<String>(
-              value: _selectedCurrency,
-              decoration: const InputDecoration(
-                labelText: 'العملة',
-                prefixIcon: Icon(Icons.currency_exchange),
-              ),
-              items: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR']
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedCurrency = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Category field
-            DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(
-                labelText: 'الفئة',
-                prefixIcon: Icon(Icons.category),
-              ),
-              items: _categories
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedCategory = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Date field
-            GestureDetector(
-              onTap: _pickDate,
-              child: InputDecorator(
+              // Amount field
+              TextFormField(
+                key: _amountFieldKey,
+                controller: _amountController,
+                focusNode: _amountFocusNode,
                 decoration: const InputDecoration(
-                  labelText: 'التاريخ',
-                  prefixIcon: Icon(Icons.calendar_today),
+                  labelText: 'المبلغ',
+                  hintText: 'أدخل المبلغ',
+                  prefixIcon: Icon(Icons.attach_money),
                 ),
-                child: Text(
-                  '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (text.isEmpty) {
+                    return 'المبلغ مطلوب';
+                  }
+                  final parsed = double.tryParse(text);
+                  if (parsed == null || parsed <= 0) {
+                    return 'يرجى إدخال مبلغ صحيح';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Currency field
+              DropdownButtonFormField<String>(
+                value: _selectedCurrency,
+                decoration: const InputDecoration(
+                  labelText: 'العملة',
+                  prefixIcon: Icon(Icons.currency_exchange),
+                ),
+                items: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR']
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedCurrency = value;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Category field
+              DropdownButtonFormField<String>(
+                key: _categoryFieldKey,
+                focusNode: _categoryFocusNode,
+                value: _selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'الفئة',
+                  prefixIcon: Icon(Icons.category),
+                ),
+                items: _categories
+                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'الفئة مطلوبة';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Date field
+              GestureDetector(
+                onTap: _pickDate,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'التاريخ',
+                    prefixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Text(
+                    '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Merchant field
-            TextFormField(
-              controller: _merchantController,
-              decoration: const InputDecoration(
-                labelText: 'مكان الشراء',
-                hintText: 'مثال: Starbucks، Uber، Hotel ABC',
-                prefixIcon: Icon(Icons.store),
+              // Merchant field
+              TextFormField(
+                key: _merchantFieldKey,
+                controller: _merchantController,
+                focusNode: _merchantFocusNode,
+                decoration: const InputDecoration(
+                  labelText: 'مكان الشراء',
+                  hintText: 'مثال: Starbucks، Uber، Hotel ABC',
+                  prefixIcon: Icon(Icons.store),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'مكان الشراء مطلوب';
+                  }
+                  return null;
+                },
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
 
-            // Payment Method field
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              // Payment Method field
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.payment, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'طريقة الدفع',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (Theme.of(context).useMaterial3)
+                    SegmentedButton<String>(
+                      segments: _paymentMethods.entries
+                          .map(
+                            (entry) => ButtonSegment<String>(
+                              value: entry.key,
+                              label: Text(entry.value),
+                            ),
+                          )
+                          .toList(),
+                      selected: {_selectedPaymentMethod},
+                      onSelectionChanged: (selection) {
+                        final value = selection.isNotEmpty
+                            ? selection.first
+                            : _selectedPaymentMethod;
+                        _onPaymentMethodChanged(value);
+                      },
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      children: _paymentMethods.entries
+                          .map(
+                            (entry) => ChoiceChip(
+                              label: Text(entry.value),
+                              selected: _selectedPaymentMethod == entry.key,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  _onPaymentMethodChanged(entry.key);
+                                }
+                              },
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  if (_shouldShowPaymentDetails(_selectedPaymentMethod)) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: _selectedPaymentBrand,
+                      decoration: const InputDecoration(
+                        labelText: 'علامة البطاقة/المحفظة (اختياري)',
+                        prefixIcon: Icon(Icons.credit_card),
+                      ),
+                      items: _getBrandOptions()
+                          .entries
+                          .map((entry) => DropdownMenuItem(
+                                value: entry.key,
+                                child: Text(entry.value),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedPaymentBrand = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _paymentLabelController,
+                      decoration: const InputDecoration(
+                        labelText: 'اسم البطاقة/المحفظة (اختياري)',
+                        hintText: 'مثال: فرسان الراجحي',
+                        prefixIcon: Icon(Icons.badge),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Location text field
+              TextFormField(
+                controller: _locationController,
+                decoration: const InputDecoration(
+                  labelText: 'موقع الشراء (اختياري)',
+                  hintText: 'مثال: مطار إسطنبول، Taksim، Dubai Mall',
+                  prefixIcon: Icon(Icons.place),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Note field
+              TextFormField(
+                controller: _noteController,
+                decoration: const InputDecoration(
+                  labelText: 'ملاحظات (اختياري)',
+                  hintText: 'أضف ملاحظات عن هذا المصروف',
+                  prefixIcon: Icon(Icons.note),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+
+              // Receipts section
+              if (isEditing || _newExpenseId != null) ...[
+                Text(
+                  'الإيصالات',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.payment, size: 20),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => ref
+                            .read(receiptProvider.notifier)
+                            .addReceiptFromCamera(_newExpenseId ?? widget.expense!.id),
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('كاميرا'),
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    Text(
-                      'طريقة الدفع',
-                      style: Theme.of(context).textTheme.bodyLarge,
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => ref
+                            .read(receiptProvider.notifier)
+                            .addReceiptFromGallery(_newExpenseId ?? widget.expense!.id),
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text('معرض'),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                if (Theme.of(context).useMaterial3)
-                  SegmentedButton<String>(
-                    segments: _paymentMethods.entries
-                        .map(
-                          (entry) => ButtonSegment<String>(
-                            value: entry.key,
-                            label: Text(entry.value),
-                          ),
-                        )
-                        .toList(),
-                    selected: {_selectedPaymentMethod},
-                    onSelectionChanged: (selection) {
-                      final value = selection.isNotEmpty
-                          ? selection.first
-                          : _selectedPaymentMethod;
-                      _onPaymentMethodChanged(value);
-                    },
-                  )
-                else
-                  Wrap(
-                    spacing: 8,
-                    children: _paymentMethods.entries
-                        .map(
-                          (entry) => ChoiceChip(
-                            label: Text(entry.value),
-                            selected: _selectedPaymentMethod == entry.key,
-                            onSelected: (selected) {
-                              if (selected) {
-                                _onPaymentMethodChanged(entry.key);
-                              }
-                            },
-                          ),
-                        )
-                        .toList(),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                ReceiptGallery(
+                  expenseId: _newExpenseId ?? (isEditing ? widget.expense!.id : ''),
+                  isEditing: true,
+                ),
+                const SizedBox(height: 24),
+              ] else
+                const SizedBox(height: 12),
 
-            // Location text field
-            TextFormField(
-              controller: _locationController,
-              decoration: const InputDecoration(
-                labelText: 'موقع الشراء (اختياري)',
-                hintText: 'مثال: مطار إسطنبول، Taksim، Dubai Mall',
-                prefixIcon: Icon(Icons.place),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Note field
-            TextFormField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'ملاحظات (اختياري)',
-                hintText: 'أضف ملاحظات عن هذا المصروف',
-                prefixIcon: Icon(Icons.note),
-              ),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 24),
-
-            // Receipts section
-            if (isEditing || _newExpenseId != null) ...[
-              Text(
-                'الإيصالات',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 12),
+              // Buttons
               Row(
                 children: [
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => ref
-                          .read(receiptProvider.notifier)
-                          .addReceiptFromCamera(_newExpenseId ?? widget.expense!.id),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('كاميرا'),
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('إلغاء'),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => ref
-                          .read(receiptProvider.notifier)
-                          .addReceiptFromGallery(_newExpenseId ?? widget.expense!.id),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('معرض'),
+                    child: ElevatedButton(
+                      onPressed: _newExpenseId != null
+                          ? () => Navigator.pop(context)
+                          : _addOrUpdateExpense,
+                      child: Text(
+                        _newExpenseId != null
+                            ? 'إغلاق'
+                            : (isEditing ? 'تحديث' : 'إضافة'),
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              ReceiptGallery(
-                expenseId: _newExpenseId ?? (isEditing ? widget.expense!.id : ''),
-                isEditing: true,
-              ),
-              const SizedBox(height: 24),
-            ] else
-              const SizedBox(height: 12),
-
-            // Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('إلغاء'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _newExpenseId != null
-                        ? () => Navigator.pop(context)
-                        : _addOrUpdateExpense,
-                    child: Text(
-                      _newExpenseId != null
-                          ? 'إغلاق'
-                          : (isEditing ? 'تحديث' : 'إضافة'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-          ],
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+            ],
+          ),
         ),
       ),
     );

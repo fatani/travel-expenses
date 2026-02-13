@@ -27,7 +27,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -64,6 +64,16 @@ class AppDatabase extends _$AppDatabase {
         // Add optional location text to expenses table
         if (!await _hasColumn('expenses_table', 'location_text')) {
           await m.addColumn(expensesTable, expensesTable.locationText);
+        }
+      }
+
+      if (from <= 4 && to >= 5) {
+        // Add optional payment brand/label to expenses table
+        if (!await _hasColumn('expenses_table', 'payment_method_brand')) {
+          await m.addColumn(expensesTable, expensesTable.paymentMethodBrand);
+        }
+        if (!await _hasColumn('expenses_table', 'payment_method_label')) {
+          await m.addColumn(expensesTable, expensesTable.paymentMethodLabel);
         }
       }
     },

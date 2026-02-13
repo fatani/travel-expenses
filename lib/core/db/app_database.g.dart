@@ -520,6 +520,28 @@ class $ExpensesTableTable extends expense_table.ExpensesTable
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _paymentMethodBrandMeta =
+      const VerificationMeta('paymentMethodBrand');
+  @override
+  late final GeneratedColumn<String> paymentMethodBrand =
+      GeneratedColumn<String>(
+        'payment_method_brand',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _paymentMethodLabelMeta =
+      const VerificationMeta('paymentMethodLabel');
+  @override
+  late final GeneratedColumn<String> paymentMethodLabel =
+      GeneratedColumn<String>(
+        'payment_method_label',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _locationTextMeta = const VerificationMeta(
     'locationText',
   );
@@ -553,6 +575,8 @@ class $ExpensesTableTable extends expense_table.ExpensesTable
     note,
     merchant,
     paymentMethod,
+    paymentMethodBrand,
+    paymentMethodLabel,
     locationText,
     createdAt,
   ];
@@ -634,6 +658,24 @@ class $ExpensesTableTable extends expense_table.ExpensesTable
         ),
       );
     }
+    if (data.containsKey('payment_method_brand')) {
+      context.handle(
+        _paymentMethodBrandMeta,
+        paymentMethodBrand.isAcceptableOrUnknown(
+          data['payment_method_brand']!,
+          _paymentMethodBrandMeta,
+        ),
+      );
+    }
+    if (data.containsKey('payment_method_label')) {
+      context.handle(
+        _paymentMethodLabelMeta,
+        paymentMethodLabel.isAcceptableOrUnknown(
+          data['payment_method_label']!,
+          _paymentMethodLabelMeta,
+        ),
+      );
+    }
     if (data.containsKey('location_text')) {
       context.handle(
         _locationTextMeta,
@@ -702,6 +744,14 @@ class $ExpensesTableTable extends expense_table.ExpensesTable
         DriftSqlType.string,
         data['${effectivePrefix}payment_method'],
       ),
+      paymentMethodBrand: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_method_brand'],
+      ),
+      paymentMethodLabel: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payment_method_label'],
+      ),
       locationText: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}location_text'],
@@ -731,6 +781,8 @@ class ExpensesTableData extends DataClass
   final String? note;
   final String? merchant;
   final String? paymentMethod;
+  final String? paymentMethodBrand;
+  final String? paymentMethodLabel;
   final String? locationText;
   final DateTime createdAt;
   const ExpensesTableData({
@@ -743,6 +795,8 @@ class ExpensesTableData extends DataClass
     this.note,
     this.merchant,
     this.paymentMethod,
+    this.paymentMethodBrand,
+    this.paymentMethodLabel,
     this.locationText,
     required this.createdAt,
   });
@@ -763,6 +817,12 @@ class ExpensesTableData extends DataClass
     }
     if (!nullToAbsent || paymentMethod != null) {
       map['payment_method'] = Variable<String>(paymentMethod);
+    }
+    if (!nullToAbsent || paymentMethodBrand != null) {
+      map['payment_method_brand'] = Variable<String>(paymentMethodBrand);
+    }
+    if (!nullToAbsent || paymentMethodLabel != null) {
+      map['payment_method_label'] = Variable<String>(paymentMethodLabel);
     }
     if (!nullToAbsent || locationText != null) {
       map['location_text'] = Variable<String>(locationText);
@@ -788,6 +848,14 @@ class ExpensesTableData extends DataClass
           paymentMethod == null && nullToAbsent
               ? const Value.absent()
               : Value(paymentMethod),
+      paymentMethodBrand:
+          paymentMethodBrand == null && nullToAbsent
+              ? const Value.absent()
+              : Value(paymentMethodBrand),
+      paymentMethodLabel:
+          paymentMethodLabel == null && nullToAbsent
+              ? const Value.absent()
+              : Value(paymentMethodLabel),
       locationText:
           locationText == null && nullToAbsent
               ? const Value.absent()
@@ -811,6 +879,12 @@ class ExpensesTableData extends DataClass
       note: serializer.fromJson<String?>(json['note']),
       merchant: serializer.fromJson<String?>(json['merchant']),
       paymentMethod: serializer.fromJson<String?>(json['paymentMethod']),
+      paymentMethodBrand: serializer.fromJson<String?>(
+        json['paymentMethodBrand'],
+      ),
+      paymentMethodLabel: serializer.fromJson<String?>(
+        json['paymentMethodLabel'],
+      ),
       locationText: serializer.fromJson<String?>(json['locationText']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -828,6 +902,8 @@ class ExpensesTableData extends DataClass
       'note': serializer.toJson<String?>(note),
       'merchant': serializer.toJson<String?>(merchant),
       'paymentMethod': serializer.toJson<String?>(paymentMethod),
+      'paymentMethodBrand': serializer.toJson<String?>(paymentMethodBrand),
+      'paymentMethodLabel': serializer.toJson<String?>(paymentMethodLabel),
       'locationText': serializer.toJson<String?>(locationText),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -843,6 +919,8 @@ class ExpensesTableData extends DataClass
     Value<String?> note = const Value.absent(),
     Value<String?> merchant = const Value.absent(),
     Value<String?> paymentMethod = const Value.absent(),
+    Value<String?> paymentMethodBrand = const Value.absent(),
+    Value<String?> paymentMethodLabel = const Value.absent(),
     Value<String?> locationText = const Value.absent(),
     DateTime? createdAt,
   }) => ExpensesTableData(
@@ -856,6 +934,14 @@ class ExpensesTableData extends DataClass
     merchant: merchant.present ? merchant.value : this.merchant,
     paymentMethod:
         paymentMethod.present ? paymentMethod.value : this.paymentMethod,
+    paymentMethodBrand:
+        paymentMethodBrand.present
+            ? paymentMethodBrand.value
+            : this.paymentMethodBrand,
+    paymentMethodLabel:
+        paymentMethodLabel.present
+            ? paymentMethodLabel.value
+            : this.paymentMethodLabel,
     locationText: locationText.present ? locationText.value : this.locationText,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -873,6 +959,14 @@ class ExpensesTableData extends DataClass
           data.paymentMethod.present
               ? data.paymentMethod.value
               : this.paymentMethod,
+      paymentMethodBrand:
+          data.paymentMethodBrand.present
+              ? data.paymentMethodBrand.value
+              : this.paymentMethodBrand,
+      paymentMethodLabel:
+          data.paymentMethodLabel.present
+              ? data.paymentMethodLabel.value
+              : this.paymentMethodLabel,
       locationText:
           data.locationText.present
               ? data.locationText.value
@@ -893,6 +987,8 @@ class ExpensesTableData extends DataClass
           ..write('note: $note, ')
           ..write('merchant: $merchant, ')
           ..write('paymentMethod: $paymentMethod, ')
+          ..write('paymentMethodBrand: $paymentMethodBrand, ')
+          ..write('paymentMethodLabel: $paymentMethodLabel, ')
           ..write('locationText: $locationText, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -910,6 +1006,8 @@ class ExpensesTableData extends DataClass
     note,
     merchant,
     paymentMethod,
+    paymentMethodBrand,
+    paymentMethodLabel,
     locationText,
     createdAt,
   );
@@ -926,6 +1024,8 @@ class ExpensesTableData extends DataClass
           other.note == this.note &&
           other.merchant == this.merchant &&
           other.paymentMethod == this.paymentMethod &&
+          other.paymentMethodBrand == this.paymentMethodBrand &&
+          other.paymentMethodLabel == this.paymentMethodLabel &&
           other.locationText == this.locationText &&
           other.createdAt == this.createdAt);
 }
@@ -940,6 +1040,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
   final Value<String?> note;
   final Value<String?> merchant;
   final Value<String?> paymentMethod;
+  final Value<String?> paymentMethodBrand;
+  final Value<String?> paymentMethodLabel;
   final Value<String?> locationText;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
@@ -953,6 +1055,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
     this.note = const Value.absent(),
     this.merchant = const Value.absent(),
     this.paymentMethod = const Value.absent(),
+    this.paymentMethodBrand = const Value.absent(),
+    this.paymentMethodLabel = const Value.absent(),
     this.locationText = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -967,6 +1071,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
     this.note = const Value.absent(),
     this.merchant = const Value.absent(),
     this.paymentMethod = const Value.absent(),
+    this.paymentMethodBrand = const Value.absent(),
+    this.paymentMethodLabel = const Value.absent(),
     this.locationText = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
@@ -987,6 +1093,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
     Expression<String>? note,
     Expression<String>? merchant,
     Expression<String>? paymentMethod,
+    Expression<String>? paymentMethodBrand,
+    Expression<String>? paymentMethodLabel,
     Expression<String>? locationText,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
@@ -1001,6 +1109,10 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
       if (note != null) 'note': note,
       if (merchant != null) 'merchant': merchant,
       if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (paymentMethodBrand != null)
+        'payment_method_brand': paymentMethodBrand,
+      if (paymentMethodLabel != null)
+        'payment_method_label': paymentMethodLabel,
       if (locationText != null) 'location_text': locationText,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
@@ -1017,6 +1129,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
     Value<String?>? note,
     Value<String?>? merchant,
     Value<String?>? paymentMethod,
+    Value<String?>? paymentMethodBrand,
+    Value<String?>? paymentMethodLabel,
     Value<String?>? locationText,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
@@ -1031,6 +1145,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
       note: note ?? this.note,
       merchant: merchant ?? this.merchant,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentMethodBrand: paymentMethodBrand ?? this.paymentMethodBrand,
+      paymentMethodLabel: paymentMethodLabel ?? this.paymentMethodLabel,
       locationText: locationText ?? this.locationText,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
@@ -1067,6 +1183,12 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
     if (paymentMethod.present) {
       map['payment_method'] = Variable<String>(paymentMethod.value);
     }
+    if (paymentMethodBrand.present) {
+      map['payment_method_brand'] = Variable<String>(paymentMethodBrand.value);
+    }
+    if (paymentMethodLabel.present) {
+      map['payment_method_label'] = Variable<String>(paymentMethodLabel.value);
+    }
     if (locationText.present) {
       map['location_text'] = Variable<String>(locationText.value);
     }
@@ -1091,6 +1213,8 @@ class ExpensesTableCompanion extends UpdateCompanion<ExpensesTableData> {
           ..write('note: $note, ')
           ..write('merchant: $merchant, ')
           ..write('paymentMethod: $paymentMethod, ')
+          ..write('paymentMethodBrand: $paymentMethodBrand, ')
+          ..write('paymentMethodLabel: $paymentMethodLabel, ')
           ..write('locationText: $locationText, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
@@ -1726,6 +1850,8 @@ typedef $$ExpensesTableTableCreateCompanionBuilder =
       Value<String?> note,
       Value<String?> merchant,
       Value<String?> paymentMethod,
+      Value<String?> paymentMethodBrand,
+      Value<String?> paymentMethodLabel,
       Value<String?> locationText,
       required DateTime createdAt,
       Value<int> rowid,
@@ -1741,6 +1867,8 @@ typedef $$ExpensesTableTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<String?> merchant,
       Value<String?> paymentMethod,
+      Value<String?> paymentMethodBrand,
+      Value<String?> paymentMethodLabel,
       Value<String?> locationText,
       Value<DateTime> createdAt,
       Value<int> rowid,
@@ -1797,6 +1925,16 @@ class $$ExpensesTableTableFilterComposer
 
   ColumnFilters<String> get paymentMethod => $composableBuilder(
     column: $table.paymentMethod,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMethodBrand => $composableBuilder(
+    column: $table.paymentMethodBrand,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMethodLabel => $composableBuilder(
+    column: $table.paymentMethodLabel,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1865,6 +2003,16 @@ class $$ExpensesTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get paymentMethodBrand => $composableBuilder(
+    column: $table.paymentMethodBrand,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get paymentMethodLabel => $composableBuilder(
+    column: $table.paymentMethodLabel,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get locationText => $composableBuilder(
     column: $table.locationText,
     builder: (column) => ColumnOrderings(column),
@@ -1911,6 +2059,16 @@ class $$ExpensesTableTableAnnotationComposer
 
   GeneratedColumn<String> get paymentMethod => $composableBuilder(
     column: $table.paymentMethod,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paymentMethodBrand => $composableBuilder(
+    column: $table.paymentMethodBrand,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paymentMethodLabel => $composableBuilder(
+    column: $table.paymentMethodLabel,
     builder: (column) => column,
   );
 
@@ -1971,6 +2129,8 @@ class $$ExpensesTableTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> merchant = const Value.absent(),
                 Value<String?> paymentMethod = const Value.absent(),
+                Value<String?> paymentMethodBrand = const Value.absent(),
+                Value<String?> paymentMethodLabel = const Value.absent(),
                 Value<String?> locationText = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -1984,6 +2144,8 @@ class $$ExpensesTableTableTableManager
                 note: note,
                 merchant: merchant,
                 paymentMethod: paymentMethod,
+                paymentMethodBrand: paymentMethodBrand,
+                paymentMethodLabel: paymentMethodLabel,
                 locationText: locationText,
                 createdAt: createdAt,
                 rowid: rowid,
@@ -1999,6 +2161,8 @@ class $$ExpensesTableTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> merchant = const Value.absent(),
                 Value<String?> paymentMethod = const Value.absent(),
+                Value<String?> paymentMethodBrand = const Value.absent(),
+                Value<String?> paymentMethodLabel = const Value.absent(),
                 Value<String?> locationText = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
@@ -2012,6 +2176,8 @@ class $$ExpensesTableTableTableManager
                 note: note,
                 merchant: merchant,
                 paymentMethod: paymentMethod,
+                paymentMethodBrand: paymentMethodBrand,
+                paymentMethodLabel: paymentMethodLabel,
                 locationText: locationText,
                 createdAt: createdAt,
                 rowid: rowid,

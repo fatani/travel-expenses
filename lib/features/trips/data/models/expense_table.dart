@@ -10,6 +10,8 @@ class ExpensesTable extends Table {
   TextColumn get note => text().nullable()();
   TextColumn get merchant => text().nullable()();
   TextColumn get paymentMethod => text().nullable()();
+  TextColumn get paymentMethodBrand => text().nullable()();
+  TextColumn get paymentMethodLabel => text().nullable()();
   TextColumn get locationText => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 

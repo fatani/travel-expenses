@@ -87,6 +87,8 @@ class DriftRepository implements AppRepository {
       note: Value(expense.note),
       merchant: Value(expense.merchant),
       paymentMethod: Value(expense.paymentMethod),
+      paymentMethodBrand: Value(expense.paymentMethodBrand),
+      paymentMethodLabel: Value(expense.paymentMethodLabel),
       locationText: Value(expense.locationText),
       createdAt: Value(expense.createdAt),
     );
@@ -105,6 +107,8 @@ class DriftRepository implements AppRepository {
       note: expense.note,
       merchant: expense.merchant,
       paymentMethod: expense.paymentMethod,
+      paymentMethodBrand: expense.paymentMethodBrand,
+      paymentMethodLabel: expense.paymentMethodLabel,
       locationText: expense.locationText,
       createdAt: expense.createdAt,
     );
@@ -178,6 +182,8 @@ class DriftRepository implements AppRepository {
       note: row.note,
       merchant: row.merchant ?? 'غير محدد',
       paymentMethod: row.paymentMethod ?? 'cash',
+      paymentMethodBrand: row.paymentMethodBrand,
+      paymentMethodLabel: row.paymentMethodLabel,
       locationText: row.locationText,
       createdAt: row.createdAt,
     );

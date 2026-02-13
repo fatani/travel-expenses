@@ -8,6 +8,8 @@ class Expense {
   final String? note;
   final String merchant;
   final String paymentMethod;
+  final String? paymentMethodBrand;
+  final String? paymentMethodLabel;
   final String? locationText;
   final DateTime createdAt;
 
@@ -21,6 +23,8 @@ class Expense {
     this.note,
     required this.merchant,
     required this.paymentMethod,
+    this.paymentMethodBrand,
+    this.paymentMethodLabel,
     this.locationText,
     required this.createdAt,
   });
@@ -35,6 +39,8 @@ class Expense {
     String? note,
     String? merchant,
     String? paymentMethod,
+    String? paymentMethodBrand,
+    String? paymentMethodLabel,
     String? locationText,
     DateTime? createdAt,
   }) {
@@ -48,6 +54,8 @@ class Expense {
       note: note ?? this.note,
       merchant: merchant ?? this.merchant,
       paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentMethodBrand: paymentMethodBrand ?? this.paymentMethodBrand,
+      paymentMethodLabel: paymentMethodLabel ?? this.paymentMethodLabel,
       locationText: locationText ?? this.locationText,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -63,6 +71,8 @@ class Expense {
     'note': note,
     'merchant': merchant,
     'paymentMethod': paymentMethod,
+    'paymentMethodBrand': paymentMethodBrand,
+    'paymentMethodLabel': paymentMethodLabel,
     'locationText': locationText,
     'createdAt': createdAt.millisecondsSinceEpoch,
   };
@@ -77,6 +87,8 @@ class Expense {
     note: json['note'],
     merchant: json['merchant'],
     paymentMethod: json['paymentMethod'],
+    paymentMethodBrand: json['paymentMethodBrand'],
+    paymentMethodLabel: json['paymentMethodLabel'],
     locationText: json['locationText'],
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
   );

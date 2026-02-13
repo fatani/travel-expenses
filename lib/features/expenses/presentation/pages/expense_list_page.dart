@@ -161,6 +161,57 @@ class _ExpenseListItem extends StatelessWidget {
     }
   }
 
+  String _getPaymentTypeLabel(String paymentMethod) {
+    switch (paymentMethod) {
+      case 'cash':
+        return 'نقد';
+      case 'card':
+        return 'بطاقة';
+      case 'wallet':
+        return 'محفظة';
+      case 'other':
+        return 'أخرى';
+      default:
+        return paymentMethod;
+    }
+  }
+
+  String _getPaymentBrandLabel(String brand) {
+    switch (brand) {
+      case 'visa':
+        return 'Visa';
+      case 'mastercard':
+        return 'Mastercard';
+      case 'mada':
+        return 'Mada';
+      case 'amex':
+        return 'Amex';
+      case 'apple_pay':
+        return 'Apple Pay';
+      case 'google_pay':
+        return 'Google Pay';
+      case 'stc_pay':
+        return 'STC Pay';
+      case 'other':
+        return 'Other';
+      default:
+        return brand;
+    }
+  }
+
+  String _formatPaymentLine() {
+    final parts = <String>[_getPaymentTypeLabel(expense.paymentMethod)];
+    final brand = expense.paymentMethodBrand?.trim();
+    if (brand != null && brand.isNotEmpty) {
+      parts.add(_getPaymentBrandLabel(brand));
+    }
+    final label = expense.paymentMethodLabel?.trim();
+    if (label != null && label.isNotEmpty) {
+      parts.add(label);
+    }
+    return parts.join(' • ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final locationText = expense.locationText?.trim();
@@ -180,6 +231,11 @@ class _ExpenseListItem extends StatelessWidget {
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
+          const SizedBox(height: 4),
+          Text(
+            _formatPaymentLine(),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          ),
         ],
       ),
       trailing: Row(

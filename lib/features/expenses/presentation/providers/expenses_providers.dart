@@ -28,6 +28,8 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<void>> {
     required String category,
     required String merchant,
     required String paymentMethod,
+    String? paymentMethodBrand,
+    String? paymentMethodLabel,
     String? locationText,
     String? note,
     String? id, // Optional: use this ID if provided
@@ -44,6 +46,8 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<void>> {
         note: note,
         merchant: merchant,
         paymentMethod: paymentMethod,
+        paymentMethodBrand: paymentMethodBrand,
+        paymentMethodLabel: paymentMethodLabel,
         locationText: locationText,
         createdAt: DateTime.now(),
       );
