@@ -969,9 +969,18 @@ class $ReceiptsTableTable extends receipt_table.ReceiptsTable
   late final GeneratedColumn<String> localPath = GeneratedColumn<String>(
     'local_path',
     aliasedName,
-    false,
+    true,
     type: DriftSqlType.string,
-    requiredDuringInsert: true,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dataMeta = const VerificationMeta('data');
+  @override
+  late final GeneratedColumn<Uint8List> data = GeneratedColumn<Uint8List>(
+    'data',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
@@ -985,7 +994,13 @@ class $ReceiptsTableTable extends receipt_table.ReceiptsTable
     requiredDuringInsert: true,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, expenseId, localPath, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    expenseId,
+    localPath,
+    data,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1016,8 +1031,12 @@ class $ReceiptsTableTable extends receipt_table.ReceiptsTable
         _localPathMeta,
         localPath.isAcceptableOrUnknown(data['local_path']!, _localPathMeta),
       );
-    } else if (isInserting) {
-      context.missing(_localPathMeta);
+    }
+    if (data.containsKey('data')) {
+      context.handle(
+        _dataMeta,
+        this.data.isAcceptableOrUnknown(data['data']!, _dataMeta),
+      );
     }
     if (data.containsKey('created_at')) {
       context.handle(
@@ -1046,11 +1065,14 @@ class $ReceiptsTableTable extends receipt_table.ReceiptsTable
             DriftSqlType.string,
             data['${effectivePrefix}expense_id'],
           )!,
-      localPath:
-          attachedDatabase.typeMapping.read(
-            DriftSqlType.string,
-            data['${effectivePrefix}local_path'],
-          )!,
+      localPath: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}local_path'],
+      ),
+      data: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}data'],
+      ),
       createdAt:
           attachedDatabase.typeMapping.read(
             DriftSqlType.dateTime,
@@ -1069,12 +1091,14 @@ class ReceiptsTableData extends DataClass
     implements Insertable<ReceiptsTableData> {
   final String id;
   final String expenseId;
-  final String localPath;
+  final String? localPath;
+  final Uint8List? data;
   final DateTime createdAt;
   const ReceiptsTableData({
     required this.id,
     required this.expenseId,
-    required this.localPath,
+    this.localPath,
+    this.data,
     required this.createdAt,
   });
   @override
@@ -1082,7 +1106,12 @@ class ReceiptsTableData extends DataClass
     final map = <String, Expression>{};
     map['id'] = Variable<String>(id);
     map['expense_id'] = Variable<String>(expenseId);
-    map['local_path'] = Variable<String>(localPath);
+    if (!nullToAbsent || localPath != null) {
+      map['local_path'] = Variable<String>(localPath);
+    }
+    if (!nullToAbsent || data != null) {
+      map['data'] = Variable<Uint8List>(data);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1091,7 +1120,11 @@ class ReceiptsTableData extends DataClass
     return ReceiptsTableCompanion(
       id: Value(id),
       expenseId: Value(expenseId),
-      localPath: Value(localPath),
+      localPath:
+          localPath == null && nullToAbsent
+              ? const Value.absent()
+              : Value(localPath),
+      data: data == null && nullToAbsent ? const Value.absent() : Value(data),
       createdAt: Value(createdAt),
     );
   }
@@ -1104,7 +1137,8 @@ class ReceiptsTableData extends DataClass
     return ReceiptsTableData(
       id: serializer.fromJson<String>(json['id']),
       expenseId: serializer.fromJson<String>(json['expenseId']),
-      localPath: serializer.fromJson<String>(json['localPath']),
+      localPath: serializer.fromJson<String?>(json['localPath']),
+      data: serializer.fromJson<Uint8List?>(json['data']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1114,7 +1148,8 @@ class ReceiptsTableData extends DataClass
     return <String, dynamic>{
       'id': serializer.toJson<String>(id),
       'expenseId': serializer.toJson<String>(expenseId),
-      'localPath': serializer.toJson<String>(localPath),
+      'localPath': serializer.toJson<String?>(localPath),
+      'data': serializer.toJson<Uint8List?>(data),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1122,12 +1157,14 @@ class ReceiptsTableData extends DataClass
   ReceiptsTableData copyWith({
     String? id,
     String? expenseId,
-    String? localPath,
+    Value<String?> localPath = const Value.absent(),
+    Value<Uint8List?> data = const Value.absent(),
     DateTime? createdAt,
   }) => ReceiptsTableData(
     id: id ?? this.id,
     expenseId: expenseId ?? this.expenseId,
-    localPath: localPath ?? this.localPath,
+    localPath: localPath.present ? localPath.value : this.localPath,
+    data: data.present ? data.value : this.data,
     createdAt: createdAt ?? this.createdAt,
   );
   ReceiptsTableData copyWithCompanion(ReceiptsTableCompanion data) {
@@ -1135,6 +1172,7 @@ class ReceiptsTableData extends DataClass
       id: data.id.present ? data.id.value : this.id,
       expenseId: data.expenseId.present ? data.expenseId.value : this.expenseId,
       localPath: data.localPath.present ? data.localPath.value : this.localPath,
+      data: data.data.present ? data.data.value : this.data,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1145,13 +1183,20 @@ class ReceiptsTableData extends DataClass
           ..write('id: $id, ')
           ..write('expenseId: $expenseId, ')
           ..write('localPath: $localPath, ')
+          ..write('data: $data, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, expenseId, localPath, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    expenseId,
+    localPath,
+    $driftBlobEquality.hash(data),
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1159,36 +1204,40 @@ class ReceiptsTableData extends DataClass
           other.id == this.id &&
           other.expenseId == this.expenseId &&
           other.localPath == this.localPath &&
+          $driftBlobEquality.equals(other.data, this.data) &&
           other.createdAt == this.createdAt);
 }
 
 class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
   final Value<String> id;
   final Value<String> expenseId;
-  final Value<String> localPath;
+  final Value<String?> localPath;
+  final Value<Uint8List?> data;
   final Value<DateTime> createdAt;
   final Value<int> rowid;
   const ReceiptsTableCompanion({
     this.id = const Value.absent(),
     this.expenseId = const Value.absent(),
     this.localPath = const Value.absent(),
+    this.data = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   ReceiptsTableCompanion.insert({
     required String id,
     required String expenseId,
-    required String localPath,
+    this.localPath = const Value.absent(),
+    this.data = const Value.absent(),
     required DateTime createdAt,
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        expenseId = Value(expenseId),
-       localPath = Value(localPath),
        createdAt = Value(createdAt);
   static Insertable<ReceiptsTableData> custom({
     Expression<String>? id,
     Expression<String>? expenseId,
     Expression<String>? localPath,
+    Expression<Uint8List>? data,
     Expression<DateTime>? createdAt,
     Expression<int>? rowid,
   }) {
@@ -1196,6 +1245,7 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
       if (id != null) 'id': id,
       if (expenseId != null) 'expense_id': expenseId,
       if (localPath != null) 'local_path': localPath,
+      if (data != null) 'data': data,
       if (createdAt != null) 'created_at': createdAt,
       if (rowid != null) 'rowid': rowid,
     });
@@ -1204,7 +1254,8 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
   ReceiptsTableCompanion copyWith({
     Value<String>? id,
     Value<String>? expenseId,
-    Value<String>? localPath,
+    Value<String?>? localPath,
+    Value<Uint8List?>? data,
     Value<DateTime>? createdAt,
     Value<int>? rowid,
   }) {
@@ -1212,6 +1263,7 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
       id: id ?? this.id,
       expenseId: expenseId ?? this.expenseId,
       localPath: localPath ?? this.localPath,
+      data: data ?? this.data,
       createdAt: createdAt ?? this.createdAt,
       rowid: rowid ?? this.rowid,
     );
@@ -1229,6 +1281,9 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
     if (localPath.present) {
       map['local_path'] = Variable<String>(localPath.value);
     }
+    if (data.present) {
+      map['data'] = Variable<Uint8List>(data.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1244,6 +1299,7 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
           ..write('id: $id, ')
           ..write('expenseId: $expenseId, ')
           ..write('localPath: $localPath, ')
+          ..write('data: $data, ')
           ..write('createdAt: $createdAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
@@ -1772,7 +1828,8 @@ typedef $$ReceiptsTableTableCreateCompanionBuilder =
     ReceiptsTableCompanion Function({
       required String id,
       required String expenseId,
-      required String localPath,
+      Value<String?> localPath,
+      Value<Uint8List?> data,
       required DateTime createdAt,
       Value<int> rowid,
     });
@@ -1780,7 +1837,8 @@ typedef $$ReceiptsTableTableUpdateCompanionBuilder =
     ReceiptsTableCompanion Function({
       Value<String> id,
       Value<String> expenseId,
-      Value<String> localPath,
+      Value<String?> localPath,
+      Value<Uint8List?> data,
       Value<DateTime> createdAt,
       Value<int> rowid,
     });
@@ -1806,6 +1864,11 @@ class $$ReceiptsTableTableFilterComposer
 
   ColumnFilters<String> get localPath => $composableBuilder(
     column: $table.localPath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get data => $composableBuilder(
+    column: $table.data,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1839,6 +1902,11 @@ class $$ReceiptsTableTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get data => $composableBuilder(
+    column: $table.data,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1862,6 +1930,9 @@ class $$ReceiptsTableTableAnnotationComposer
 
   GeneratedColumn<String> get localPath =>
       $composableBuilder(column: $table.localPath, builder: (column) => column);
+
+  GeneratedColumn<Uint8List> get data =>
+      $composableBuilder(column: $table.data, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -1908,13 +1979,15 @@ class $$ReceiptsTableTableTableManager
               ({
                 Value<String> id = const Value.absent(),
                 Value<String> expenseId = const Value.absent(),
-                Value<String> localPath = const Value.absent(),
+                Value<String?> localPath = const Value.absent(),
+                Value<Uint8List?> data = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => ReceiptsTableCompanion(
                 id: id,
                 expenseId: expenseId,
                 localPath: localPath,
+                data: data,
                 createdAt: createdAt,
                 rowid: rowid,
               ),
@@ -1922,13 +1995,15 @@ class $$ReceiptsTableTableTableManager
               ({
                 required String id,
                 required String expenseId,
-                required String localPath,
+                Value<String?> localPath = const Value.absent(),
+                Value<Uint8List?> data = const Value.absent(),
                 required DateTime createdAt,
                 Value<int> rowid = const Value.absent(),
               }) => ReceiptsTableCompanion.insert(
                 id: id,
                 expenseId: expenseId,
                 localPath: localPath,
+                data: data,
                 createdAt: createdAt,
                 rowid: rowid,
               ),

@@ -94,20 +94,7 @@ class _ReceiptThumbnail extends ConsumerWidget {
             onTap: () => _showFullImage(context),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(receipt.localPath),
-                width: 100,
-                height: 100,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 100,
-                    height: 100,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.broken_image),
-                  );
-                },
-              ),
+              child: _buildImage(),
             ),
           ),
           Positioned(
@@ -134,6 +121,52 @@ class _ReceiptThumbnail extends ConsumerWidget {
     );
   }
 
+  Widget _buildImage() {
+    // Web: Use data (bytes)
+    if (receipt.data != null) {
+      return Image.memory(
+        receipt.data!,
+        width: 100,
+        height: 100,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 100,
+            height: 100,
+            color: Colors.grey[300],
+            child: const Icon(Icons.broken_image),
+          );
+        },
+      );
+    }
+    
+    // Mobile: Use localPath (file)
+    if (receipt.localPath != null) {
+      return Image.file(
+        File(receipt.localPath!),
+        width: 100,
+        height: 100,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 100,
+            height: 100,
+            color: Colors.grey[300],
+            child: const Icon(Icons.broken_image),
+          );
+        },
+      );
+    }
+
+    // Fallback: No data
+    return Container(
+      width: 100,
+      height: 100,
+      color: Colors.grey[300],
+      child: const Icon(Icons.image_not_supported),
+    );
+  }
+
   void _showFullImage(BuildContext context) {
     showDialog(
       context: context,
@@ -141,10 +174,11 @@ class _ReceiptThumbnail extends ConsumerWidget {
         return Dialog(
           child: GestureDetector(
             onTap: () => Navigator.pop(context),
-            child: Image.file(
-              File(receipt.localPath),
-              fit: BoxFit.contain,
-            ),
+            child: receipt.data != null
+                ? Image.memory(receipt.data!, fit: BoxFit.contain)
+                : receipt.localPath != null
+                    ? Image.file(File(receipt.localPath!), fit: BoxFit.contain)
+                    : const Icon(Icons.broken_image, size: 100),
           ),
         );
       },

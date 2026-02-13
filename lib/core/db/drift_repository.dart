@@ -137,6 +137,7 @@ class DriftRepository implements AppRepository {
       id: Value(receipt.id),
       expenseId: Value(receipt.expenseId),
       localPath: Value(receipt.localPath),
+      data: Value(receipt.data),
       createdAt: Value(receipt.createdAt),
     );
     await _db.insertReceipt(companion);
@@ -178,6 +179,7 @@ class DriftRepository implements AppRepository {
       id: row.id,
       expenseId: row.expenseId,
       localPath: row.localPath,
+      data: row.data,
       createdAt: row.createdAt,
     );
   }

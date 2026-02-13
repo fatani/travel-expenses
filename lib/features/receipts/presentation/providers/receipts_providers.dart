@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -37,7 +35,7 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       final image = await picker.pickImage(source: ImageSource.camera);
       if (image != null) {
-        await _processAndSaveReceipt(expenseId, File(image.path));
+        await _processAndSaveReceipt(expenseId, image);
         state = const AsyncValue.data(null);
       } else {
         state = const AsyncValue.data(null);
@@ -52,7 +50,7 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       final image = await picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
-        await _processAndSaveReceipt(expenseId, File(image.path));
+        await _processAndSaveReceipt(expenseId, image);
         state = const AsyncValue.data(null);
       } else {
         state = const AsyncValue.data(null);
@@ -62,15 +60,16 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> _processAndSaveReceipt(String expenseId, File imageFile) async {
-    // 1. Save image to local storage
-    final localPath = await storage.saveReceiptImage(expenseId, imageFile);
+  Future<void> _processAndSaveReceipt(String expenseId, XFile imageFile) async {
+    // 1. Save image - different behavior on Web vs Mobile
+    final result = await storage.saveReceiptImage(expenseId, imageFile);
 
     // 2. Create receipt record with UUID
     final receipt = Receipt(
       id: const Uuid().v4(),
       expenseId: expenseId,
-      localPath: localPath,
+      localPath: result.localPath, // Mobile/Desktop
+      data: result.data, // Web
       createdAt: DateTime.now(),
     );
 

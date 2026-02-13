@@ -17,7 +17,23 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onUpgrade: (m, from, to) async {
+      if (from == 1 && to == 2) {
+        // Add new columns to receipts table
+        await m.addColumn(receiptsTable, receiptsTable.data);
+        await m.alterTable(TableMigration(
+          receiptsTable,
+          columnTransformer: {
+            receiptsTable.localPath: receiptsTable.localPath,
+          },
+        ));
+      }
+    },
+  );
 
   // Trips Operations
   Future<List<TripsTableData>> getAllTrips() => select(tripsTable).get();

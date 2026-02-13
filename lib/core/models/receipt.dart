@@ -1,13 +1,17 @@
+import 'dart:typed_data';
+
 class Receipt {
   final String id;
   final String expenseId;
-  final String localPath;
+  final String? localPath; // Nullable for Web
+  final Uint8List? data; // Store image bytes for Web
   final DateTime createdAt;
 
   Receipt({
     required this.id,
     required this.expenseId,
-    required this.localPath,
+    this.localPath,
+    this.data,
     required this.createdAt,
   });
 
@@ -15,12 +19,14 @@ class Receipt {
     String? id,
     String? expenseId,
     String? localPath,
+    Uint8List? data,
     DateTime? createdAt,
   }) {
     return Receipt(
       id: id ?? this.id,
       expenseId: expenseId ?? this.expenseId,
       localPath: localPath ?? this.localPath,
+      data: data ?? this.data,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -29,6 +35,7 @@ class Receipt {
     'id': id,
     'expenseId': expenseId,
     'localPath': localPath,
+    'data': data,
     'createdAt': createdAt.millisecondsSinceEpoch,
   };
 
@@ -36,6 +43,7 @@ class Receipt {
     id: json['id'],
     expenseId: json['expenseId'],
     localPath: json['localPath'],
+    data: json['data'],
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
   );
 }
