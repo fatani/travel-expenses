@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/models/expense.dart';
@@ -24,6 +25,8 @@ class AddEditExpensePage extends ConsumerStatefulWidget {
 }
 
 class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
+  static const String _paymentPrefKey = 'last_payment_method_type';
+
   late TextEditingController _amountController;
   late TextEditingController _noteController;
   late TextEditingController _merchantController;
@@ -73,6 +76,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _selectedCurrency = widget.tripCurrency;
       _selectedPaymentMethod = _paymentMethods.keys.first;
       _selectedDate = DateTime.now();
+      _loadPaymentMethodPreference();
     }
   }
 
@@ -83,6 +87,29 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     _merchantController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPaymentMethodPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_paymentPrefKey) ?? 'cash';
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _selectedPaymentMethod = stored;
+    });
+  }
+
+  Future<void> _persistPaymentMethod(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_paymentPrefKey, value);
+  }
+
+  void _onPaymentMethodChanged(String value) {
+    setState(() {
+      _selectedPaymentMethod = value;
+    });
+    _persistPaymentMethod(value);
   }
 
   void _addOrUpdateExpense() async {
@@ -288,25 +315,56 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
             const SizedBox(height: 16),
 
             // Payment Method field
-            DropdownButtonFormField<String>(
-              value: _selectedPaymentMethod,
-              decoration: const InputDecoration(
-                labelText: 'طريقة الدفع',
-                prefixIcon: Icon(Icons.payment),
-              ),
-              items: _paymentMethods.entries
-                  .map((entry) => DropdownMenuItem(
-                        value: entry.key,
-                        child: Text(entry.value),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedPaymentMethod = value;
-                  });
-                }
-              },
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.payment, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'طريقة الدفع',
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (Theme.of(context).useMaterial3)
+                  SegmentedButton<String>(
+                    segments: _paymentMethods.entries
+                        .map(
+                          (entry) => ButtonSegment<String>(
+                            value: entry.key,
+                            label: Text(entry.value),
+                          ),
+                        )
+                        .toList(),
+                    selected: {_selectedPaymentMethod},
+                    onSelectionChanged: (selection) {
+                      final value = selection.isNotEmpty
+                          ? selection.first
+                          : _selectedPaymentMethod;
+                      _onPaymentMethodChanged(value);
+                    },
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    children: _paymentMethods.entries
+                        .map(
+                          (entry) => ChoiceChip(
+                            label: Text(entry.value),
+                            selected: _selectedPaymentMethod == entry.key,
+                            onSelected: (selected) {
+                              if (selected) {
+                                _onPaymentMethodChanged(entry.key);
+                              }
+                            },
+                          ),
+                        )
+                        .toList(),
+                  ),
+              ],
             ),
             const SizedBox(height: 16),
 
