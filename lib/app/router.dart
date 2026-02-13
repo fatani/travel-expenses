@@ -16,6 +16,13 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const AddEditTripPage(),
     ),
     GoRoute(
+      path: '/trips/:id/edit',
+      builder: (context, state) {
+        final tripId = state.pathParameters['id'] ?? '';
+        return AddEditTripPage(tripId: tripId);
+      },
+    ),
+    GoRoute(
       path: '/trips/:id',
       builder: (context, state) {
         final tripId = state.pathParameters['id'] ?? '';

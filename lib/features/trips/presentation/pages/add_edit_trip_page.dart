@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/models/trip.dart';
 import '../providers/trips_providers.dart';
 
 class AddEditTripPage extends ConsumerStatefulWidget {
-  const AddEditTripPage({super.key});
+  final String? tripId;
+
+  const AddEditTripPage({
+    super.key,
+    this.tripId,
+  });
 
   @override
   ConsumerState<AddEditTripPage> createState() => _AddEditTripPageState();
@@ -17,11 +23,22 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _isLoading = false;
+  bool _initializedFromTrip = false;
+  Trip? _editingTrip;
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
+  }
+
+  void _initializeFromTrip(Trip trip) {
+    _nameController.text = trip.name;
+    _selectedCurrency = trip.defaultCurrency;
+    _startDate = trip.startDate;
+    _endDate = trip.endDate;
+    _editingTrip = trip;
+    _initializedFromTrip = true;
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -59,12 +76,23 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
     });
 
     try {
-      await ref.read(addTripProvider.notifier).addTrip(
-        name: _nameController.text,
-        defaultCurrency: _selectedCurrency!,
-        startDate: _startDate,
-        endDate: _endDate,
-      );
+      if (widget.tripId == null) {
+        await ref.read(addTripProvider.notifier).addTrip(
+          name: _nameController.text,
+          defaultCurrency: _selectedCurrency!,
+          startDate: _startDate,
+          endDate: _endDate,
+        );
+      } else if (_editingTrip != null) {
+        await ref.read(updateTripProvider.notifier).updateTrip(
+          id: _editingTrip!.id,
+          name: _nameController.text,
+          defaultCurrency: _selectedCurrency!,
+          startDate: _startDate,
+          endDate: _endDate,
+          createdAt: _editingTrip!.createdAt,
+        );
+      }
 
       if (mounted) {
         Navigator.pop(context);
@@ -86,9 +114,28 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.tripId != null;
+    final tripAsync = isEditing ? ref.watch(tripByIdProvider(widget.tripId!)) : null;
+
+    if (isEditing && !_initializedFromTrip) {
+      tripAsync?.whenData((trip) {
+        if (trip == null || _initializedFromTrip) {
+          return;
+        }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted || _initializedFromTrip) {
+            return;
+          }
+          setState(() {
+            _initializeFromTrip(trip);
+          });
+        });
+      });
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('إضافة رحلة'),
+        title: Text(isEditing ? 'تعديل رحلة' : 'إضافة رحلة'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -188,7 +235,7 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('حفظ الرحلة'),
+                      : Text(isEditing ? 'تحديث الرحلة' : 'حفظ الرحلة'),
                 ),
               ),
             ],

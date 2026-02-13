@@ -61,12 +61,50 @@ class AddTripNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
+/// Notifier for updating existing trips
+class UpdateTripNotifier extends StateNotifier<AsyncValue<void>> {
+  final AppRepository repository;
+
+  UpdateTripNotifier(this.repository) : super(const AsyncValue.data(null));
+
+  Future<void> updateTrip({
+    required String id,
+    required String name,
+    required String defaultCurrency,
+    DateTime? startDate,
+    DateTime? endDate,
+    required DateTime createdAt,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final trip = Trip(
+        id: id,
+        name: name,
+        defaultCurrency: defaultCurrency,
+        startDate: startDate,
+        endDate: endDate,
+        createdAt: createdAt,
+      );
+      await repository.updateTrip(trip);
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+}
+
 /// Provider for AddTripNotifier
 /// 
 /// STABLE (no autoDispose): Keeps the notifier alive for consistent form state
 final addTripProvider = StateNotifierProvider<AddTripNotifier, AsyncValue<void>>((ref) {
   final repository = ref.watch(repositoryProvider);
   return AddTripNotifier(repository);
+});
+
+/// Provider for updating trips
+final updateTripProvider = StateNotifierProvider<UpdateTripNotifier, AsyncValue<void>>((ref) {
+  final repository = ref.watch(repositoryProvider);
+  return UpdateTripNotifier(repository);
 });
 
 /// Provider for deleting trips
