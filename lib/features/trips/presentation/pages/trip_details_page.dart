@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/trip.dart';
+import '../../../../core/models/expense.dart';
 import '../../../expenses/presentation/models/trip_summary.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
 import '../../../expenses/presentation/providers/trip_summary_provider.dart';
+import '../../../expenses/presentation/providers/expenses_providers.dart';
 import '../providers/trips_providers.dart';
 
 class TripDetailsPage extends ConsumerWidget {
@@ -152,6 +154,7 @@ class _SummaryTabContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(tripSummaryProvider(tripId));
+    final expensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
 
     return summaryAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -172,8 +175,22 @@ class _SummaryTabContent extends ConsumerWidget {
       ),
       data: (summary) {
         if (summary.totalByCurrency.isEmpty) {
-          return const Center(child: Text('لا توجد مصاريف بعد'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('لا توجد مصاريف بعد'),
+                const SizedBox(height: 8),
+                Text(
+                  'أضف أول مصروف من تبويب المصاريف',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          );
         }
+
+        final expenses = expensesAsync.asData?.value ?? [];
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -182,9 +199,15 @@ class _SummaryTabContent extends ConsumerWidget {
             children: [
               _TotalByCurrencyCard(summary: summary),
               const SizedBox(height: 16),
-              _ByCategoryCard(summary: summary),
-              const SizedBox(height: 16),
-              _ByDayCard(summary: summary),
+              if (summary.totalByCategory.isNotEmpty) ...
+                [
+                  _ByCategoryCard(summary: summary),
+                  const SizedBox(height: 16),
+                ],
+              if (summary.totalByDay.isNotEmpty) ...
+                [
+                  _ByDayCard(summary: summary, expenses: expenses),
+                ],
             ],
           ),
         );
@@ -275,8 +298,12 @@ class _ByCategoryCard extends StatelessWidget {
 
 class _ByDayCard extends StatelessWidget {
   final TripSummary summary;
+  final List<Expense> expenses;
 
-  const _ByDayCard({required this.summary});
+  const _ByDayCard({
+    required this.summary,
+    required this.expenses,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -284,6 +311,20 @@ class _ByDayCard extends StatelessWidget {
       ..sort((a, b) => b.key.compareTo(a.key));
 
     final displayDays = days.take(7).toList();
+
+    // Group expenses by (date + currency) for breakdown
+    final Map<String, Map<String, double>> dayByAmount = {};
+    for (final expense in expenses) {
+      final dayKey = DateTime(
+        expense.date.year,
+        expense.date.month,
+        expense.date.day,
+      );
+      final dayStr = _formatDate(dayKey);
+      dayByAmount.putIfAbsent(dayStr, () => {});
+      dayByAmount[dayStr]![expense.currency] =
+          (dayByAmount[dayStr]![expense.currency] ?? 0) + expense.amount;
+    }
 
     return Card(
       child: Padding(
@@ -295,28 +336,42 @@ class _ByDayCard extends StatelessWidget {
               'حسب الأيام',
               style: Theme.of(context).textTheme.titleMedium,
             ),
+            const SizedBox(height: 4),
+            Text(
+              '(آخر 7 أيام)',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 12),
             ...displayDays.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatDate(entry.key),
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatMoney(entry.value),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+              (entry) {
+                final dayStr = _formatDate(entry.key);
+                final currenciesForDay =
+                    dayByAmount[dayStr]?.entries.toList() ?? [];
+                currenciesForDay.sort((a, b) => b.value.compareTo(a.value));
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        dayStr,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                      const SizedBox(height: 6),
+                      Text(
+                        currenciesForDay
+                            .map((e) => '${e.key} ${_formatMoney(e.value)}')
+                            .join(' • '),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
