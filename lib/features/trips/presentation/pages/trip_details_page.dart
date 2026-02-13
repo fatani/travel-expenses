@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/models/trip.dart';
 import '../../../../core/models/expense.dart';
 import '../../../expenses/presentation/models/trip_summary.dart';
+import '../../../expenses/presentation/providers/expense_filters_provider.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
 import '../../../expenses/presentation/providers/trip_summary_provider.dart';
 import '../../../expenses/presentation/providers/expenses_providers.dart';
@@ -201,7 +202,7 @@ class _SummaryTabContent extends ConsumerWidget {
               const SizedBox(height: 16),
               if (summary.totalByCategory.isNotEmpty) ...
                 [
-                  _ByCategoryCard(summary: summary),
+                  _ByCategoryCard(summary: summary, expenses: expenses),
                   const SizedBox(height: 16),
                 ],
               if (summary.totalByDay.isNotEmpty) ...
@@ -258,13 +259,32 @@ class _TotalByCurrencyCard extends StatelessWidget {
 
 class _ByCategoryCard extends StatelessWidget {
   final TripSummary summary;
+  final List<Expense> expenses;
 
-  const _ByCategoryCard({required this.summary});
+  const _ByCategoryCard({
+    required this.summary,
+    required this.expenses,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final categories = summary.totalByCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    // Group expenses by category and currency
+    final Map<String, Map<String, double>> catCurrencyTotals = {};
+    
+    for (final expense in expenses) {
+      final catValue = expense.category;
+      catCurrencyTotals.putIfAbsent(catValue, () => {});
+      catCurrencyTotals[catValue]![expense.currency] =
+          (catCurrencyTotals[catValue]![expense.currency] ?? 0) + expense.amount;
+    }
+
+    // Sort categories by total amount (across all currencies) in descending order
+    final sortedCategories = catCurrencyTotals.entries.toList()
+      ..sort((a, b) {
+        final totalA = a.value.values.fold(0.0, (sum, v) => sum + v);
+        final totalB = b.value.values.fold(0.0, (sum, v) => sum + v);
+        return totalB.compareTo(totalA);
+      });
 
     return Card(
       child: Padding(
@@ -277,17 +297,47 @@ class _ByCategoryCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
-            ...categories.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(entry.key.value),
-                    Text(_formatMoney(entry.value)),
-                  ],
-                ),
-              ),
+            ...sortedCategories.map(
+              (entry) {
+                final catValue = entry.key;
+                final currenciesMap = entry.value;
+                
+                // Sort currencies by amount descending
+                final sortedCurrencies = currenciesMap.entries.toList()
+                  ..sort((a, b) => b.value.compareTo(a.value));
+
+                // Format currency breakdown
+                final currencyStr = sortedCurrencies
+                    .map((e) => '${e.key} ${_formatMoney(e.value)}')
+                    .join(' • ');
+
+                // Get category name from enum
+                final categoryEnum = ExpenseCategory.values.firstWhere(
+                  (c) => c.value == catValue,
+                  orElse: () => ExpenseCategory.other,
+                );
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        categoryEnum.value,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        currencyStr,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
             ),
           ],
         ),
