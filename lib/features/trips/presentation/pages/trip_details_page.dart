@@ -9,6 +9,7 @@ import '../../../expenses/presentation/providers/expense_filters_provider.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
 import '../../../expenses/presentation/providers/trip_summary_provider.dart';
 import '../../../expenses/presentation/providers/expenses_providers.dart';
+import '../../../export/presentation/widgets/trip_export_tab.dart';
 import '../providers/trips_providers.dart';
 
 class TripDetailsPage extends ConsumerWidget {
@@ -66,7 +67,7 @@ class TripDetailsPage extends ConsumerWidget {
                         tripCurrency: trip.defaultCurrency,
                       ),
                       _SummaryTabContent(tripId: trip.id),
-                      const _Placeholder(text: 'قريبًا: تصدير CSV'),
+                      TripExportTab(tripId: trip.id),
                     ],
                   ),
                 ),
@@ -426,19 +427,6 @@ class _ByDayCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _Placeholder extends StatelessWidget {
-  final String text;
-
-  const _Placeholder({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(text),
     );
   }
 }
