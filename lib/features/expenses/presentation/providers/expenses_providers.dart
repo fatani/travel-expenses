@@ -26,6 +26,9 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<void>> {
     required String currency,
     required DateTime date,
     required String category,
+    required String merchant,
+    required String paymentMethod,
+    String? locationText,
     String? note,
     String? id, // Optional: use this ID if provided
   }) async {
@@ -39,6 +42,9 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<void>> {
         date: date,
         category: category,
         note: note,
+        merchant: merchant,
+        paymentMethod: paymentMethod,
+        locationText: locationText,
         createdAt: DateTime.now(),
       );
       await repository.insertExpense(expense);

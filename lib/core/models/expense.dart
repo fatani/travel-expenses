@@ -6,6 +6,9 @@ class Expense {
   final DateTime date;
   final String category;
   final String? note;
+  final String merchant;
+  final String paymentMethod;
+  final String? locationText;
   final DateTime createdAt;
 
   Expense({
@@ -16,6 +19,9 @@ class Expense {
     required this.date,
     required this.category,
     this.note,
+    required this.merchant,
+    required this.paymentMethod,
+    this.locationText,
     required this.createdAt,
   });
 
@@ -27,6 +33,9 @@ class Expense {
     DateTime? date,
     String? category,
     String? note,
+    String? merchant,
+    String? paymentMethod,
+    String? locationText,
     DateTime? createdAt,
   }) {
     return Expense(
@@ -37,6 +46,9 @@ class Expense {
       date: date ?? this.date,
       category: category ?? this.category,
       note: note ?? this.note,
+      merchant: merchant ?? this.merchant,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      locationText: locationText ?? this.locationText,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -49,6 +61,9 @@ class Expense {
     'date': date.millisecondsSinceEpoch,
     'category': category,
     'note': note,
+    'merchant': merchant,
+    'paymentMethod': paymentMethod,
+    'locationText': locationText,
     'createdAt': createdAt.millisecondsSinceEpoch,
   };
 
@@ -60,6 +75,9 @@ class Expense {
     date: DateTime.fromMillisecondsSinceEpoch(json['date']),
     category: json['category'],
     note: json['note'],
+    merchant: json['merchant'],
+    paymentMethod: json['paymentMethod'],
+    locationText: json['locationText'],
     createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt']),
   );
 }

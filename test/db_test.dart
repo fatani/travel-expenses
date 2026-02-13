@@ -47,6 +47,9 @@ void main() {
         currency: 'USD',
         date: DateTime.now(),
         category: 'Food',
+        merchant: 'Test Restaurant',
+        paymentMethod: 'cash',
+        locationText: 'Test Location',
         createdAt: DateTime.now(),
       );
 
@@ -73,6 +76,8 @@ void main() {
         currency: 'SAR',
         date: DateTime.now(),
         category: 'Transport',
+        merchant: 'Uber',
+        paymentMethod: 'card',
         createdAt: DateTime.now(),
       );
       await repo.insertExpense(expense);
@@ -107,6 +112,8 @@ void main() {
         currency: 'SAR',
         date: DateTime.now(),
         category: 'Lodging',
+        merchant: 'Hotel ABC',
+        paymentMethod: 'card',
         createdAt: DateTime.now(),
       );
       await repo.insertExpense(expense);

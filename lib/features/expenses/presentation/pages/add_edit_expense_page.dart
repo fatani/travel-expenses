@@ -26,8 +26,11 @@ class AddEditExpensePage extends ConsumerStatefulWidget {
 class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   late TextEditingController _amountController;
   late TextEditingController _noteController;
+  late TextEditingController _merchantController;
+  late TextEditingController _locationController;
   late String _selectedCategory;
   late String _selectedCurrency;
+  late String _selectedPaymentMethod;
   late DateTime _selectedDate;
   String? _newExpenseId; // Track newly created expense
 
@@ -39,6 +42,13 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     'أخرى',
   ];
 
+  final Map<String, String> _paymentMethods = {
+    'cash': 'نقد',
+    'card': 'بطاقة',
+    'wallet': 'محفظة رقمية',
+    'other': 'أخرى',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -48,14 +58,20 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
         text: widget.expense!.amount.toString(),
       );
       _noteController = TextEditingController(text: widget.expense!.note ?? '');
+      _merchantController = TextEditingController(text: widget.expense!.merchant);
+      _locationController = TextEditingController(text: widget.expense!.locationText ?? '');
       _selectedCategory = widget.expense!.category;
       _selectedCurrency = widget.expense!.currency;
+      _selectedPaymentMethod = widget.expense!.paymentMethod;
       _selectedDate = widget.expense!.date;
     } else {
       _amountController = TextEditingController();
       _noteController = TextEditingController();
+      _merchantController = TextEditingController();
+      _locationController = TextEditingController();
       _selectedCategory = _categories.first;
       _selectedCurrency = widget.tripCurrency;
+      _selectedPaymentMethod = _paymentMethods.keys.first;
       _selectedDate = DateTime.now();
     }
   }
@@ -64,6 +80,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   void dispose() {
     _amountController.dispose();
     _noteController.dispose();
+    _merchantController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -84,6 +102,20 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       return;
     }
 
+    if (_merchantController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إدخال مكان الشراء')),
+      );
+      return;
+    }
+
+    if (_selectedPaymentMethod.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى اختيار طريقة الدفع')),
+      );
+      return;
+    }
+
     try {
       if (widget.expense != null) {
         // Update existing expense
@@ -93,6 +125,11 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
           date: _selectedDate,
           category: _selectedCategory,
           note: _noteController.text.isEmpty ? null : _noteController.text,
+          merchant: _merchantController.text.trim(),
+          paymentMethod: _selectedPaymentMethod,
+          locationText: _locationController.text.trim().isEmpty
+              ? null
+              : _locationController.text.trim(),
         );
         await ref.read(expenseProvider.notifier).updateExpense(
               expense: updatedExpense,
@@ -112,6 +149,11 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               date: _selectedDate,
               category: _selectedCategory,
               note: _noteController.text.isEmpty ? null : _noteController.text,
+              merchant: _merchantController.text.trim(),
+              paymentMethod: _selectedPaymentMethod,
+              locationText: _locationController.text.trim().isEmpty
+                  ? null
+                  : _locationController.text.trim(),
               id: newExpenseId, // Use generated ID
             );
 
@@ -230,6 +272,51 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 child: Text(
                   '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Merchant field
+            TextFormField(
+              controller: _merchantController,
+              decoration: const InputDecoration(
+                labelText: 'مكان الشراء',
+                hintText: 'مثال: Starbucks، Uber، Hotel ABC',
+                prefixIcon: Icon(Icons.store),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Payment Method field
+            DropdownButtonFormField<String>(
+              value: _selectedPaymentMethod,
+              decoration: const InputDecoration(
+                labelText: 'طريقة الدفع',
+                prefixIcon: Icon(Icons.payment),
+              ),
+              items: _paymentMethods.entries
+                  .map((entry) => DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      ))
+                  .toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedPaymentMethod = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Location text field
+            TextFormField(
+              controller: _locationController,
+              decoration: const InputDecoration(
+                labelText: 'موقع الشراء (اختياري)',
+                hintText: 'مثال: مطار إسطنبول، Taksim، Dubai Mall',
+                prefixIcon: Icon(Icons.place),
               ),
             ),
             const SizedBox(height: 16),

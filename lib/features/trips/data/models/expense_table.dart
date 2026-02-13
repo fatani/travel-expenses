@@ -8,6 +8,9 @@ class ExpensesTable extends Table {
   DateTimeColumn get date => dateTime()();
   TextColumn get category => text()();
   TextColumn get note => text().nullable()();
+  TextColumn get merchant => text().nullable()();
+  TextColumn get paymentMethod => text().nullable()();
+  TextColumn get locationText => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
 
   @override

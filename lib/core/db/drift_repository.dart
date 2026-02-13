@@ -85,6 +85,9 @@ class DriftRepository implements AppRepository {
       date: Value(expense.date),
       category: Value(expense.category),
       note: Value(expense.note),
+      merchant: Value(expense.merchant),
+      paymentMethod: Value(expense.paymentMethod),
+      locationText: Value(expense.locationText),
       createdAt: Value(expense.createdAt),
     );
     await _db.insertExpense(companion);
@@ -100,6 +103,9 @@ class DriftRepository implements AppRepository {
       date: expense.date,
       category: expense.category,
       note: expense.note,
+      merchant: expense.merchant,
+      paymentMethod: expense.paymentMethod,
+      locationText: expense.locationText,
       createdAt: expense.createdAt,
     );
     await _db.updateExpense(record);
@@ -170,6 +176,9 @@ class DriftRepository implements AppRepository {
       date: row.date,
       category: row.category,
       note: row.note,
+      merchant: row.merchant ?? 'غير محدد',
+      paymentMethod: row.paymentMethod ?? 'cash',
+      locationText: row.locationText,
       createdAt: row.createdAt,
     );
   }

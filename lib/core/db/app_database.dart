@@ -16,13 +16,23 @@ part 'app_database.g.dart';
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
+  Future<bool> _hasColumn(String tableName, String columnName) async {
+    final rows = await customSelect('PRAGMA table_info($tableName);').get();
+    for (final row in rows) {
+      if (row.read<String>('name') == columnName) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onUpgrade: (m, from, to) async {
-      if (from == 1 && to == 2) {
+      if (from == 1 && to >= 2) {
         // Add new columns to receipts table
         await m.addColumn(receiptsTable, receiptsTable.data);
         await m.alterTable(TableMigration(
@@ -31,6 +41,30 @@ class AppDatabase extends _$AppDatabase {
             receiptsTable.localPath: receiptsTable.localPath,
           },
         ));
+      }
+
+      if (from <= 2 && to >= 3) {
+        // Add merchant and paymentMethod to expenses table
+        if (!await _hasColumn('expenses_table', 'merchant')) {
+          await m.addColumn(expensesTable, expensesTable.merchant);
+        }
+        if (!await _hasColumn('expenses_table', 'payment_method')) {
+          await m.addColumn(expensesTable, expensesTable.paymentMethod);
+        }
+
+        await customStatement(
+          "UPDATE expenses_table SET merchant = 'غير محدد' WHERE merchant IS NULL",
+        );
+        await customStatement(
+          "UPDATE expenses_table SET payment_method = 'cash' WHERE payment_method IS NULL",
+        );
+      }
+
+      if (from <= 3 && to >= 4) {
+        // Add optional location text to expenses table
+        if (!await _hasColumn('expenses_table', 'location_text')) {
+          await m.addColumn(expensesTable, expensesTable.locationText);
+        }
       }
     },
   );

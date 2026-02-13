@@ -146,20 +146,61 @@ class _ExpenseListItem extends StatelessWidget {
     required this.onEdit,
   });
 
+  IconData _getPaymentIcon(String paymentMethod) {
+    switch (paymentMethod) {
+      case 'cash':
+        return Icons.payments;
+      case 'card':
+        return Icons.credit_card;
+      case 'wallet':
+        return Icons.account_balance_wallet;
+      case 'other':
+        return Icons.more_horiz;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final locationText = expense.locationText?.trim();
     return ListTile(
-      title: Text('${expense.amount} ${expense.currency}'),
-      subtitle: Text(expense.category),
-      trailing: PopupMenuButton(
-        itemBuilder: (context) => [
-          PopupMenuItem(
-            onTap: onEdit,
-            child: const Text('تعديل'),
+      title: Text('${expense.amount} ${expense.currency} • ${expense.category}'),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            expense.merchant,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-          PopupMenuItem(
-            onTap: onDelete,
-            child: const Text('حذف'),
+          if (locationText != null && locationText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              '📍 $locationText',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ],
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            _getPaymentIcon(expense.paymentMethod),
+            size: 20,
+            color: Colors.grey[600],
+          ),
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                onTap: onEdit,
+                child: const Text('تعديل'),
+              ),
+              PopupMenuItem(
+                onTap: onDelete,
+                child: const Text('حذف'),
+              ),
+            ],
           ),
         ],
       ),
