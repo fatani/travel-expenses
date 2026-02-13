@@ -31,6 +31,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   final _amountFieldKey = GlobalKey();
   final _categoryFieldKey = GlobalKey();
   final _merchantFieldKey = GlobalKey();
+  final _receiptsSectionKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
 
   late TextEditingController _amountController;
@@ -44,6 +45,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   String? _selectedPaymentBrand;
   late DateTime _selectedDate;
   String? _newExpenseId; // Track newly created expense
+  bool _wantsReceipt = false;
 
   final FocusNode _amountFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
@@ -109,6 +111,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _selectedPaymentMethod = _paymentMethods.keys.first;
       _selectedPaymentBrand = null;
       _selectedDate = DateTime.now();
+      _wantsReceipt = false;
       _loadPaymentMethodPreference();
     }
 
@@ -216,6 +219,18 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     }
   }
 
+  Future<void> _scrollToReceipts() async {
+    final targetContext = _receiptsSectionKey.currentContext;
+    if (targetContext == null) {
+      return;
+    }
+    await Scrollable.ensureVisible(
+      targetContext,
+      duration: const Duration(milliseconds: 250),
+      alignment: 0.1,
+    );
+  }
+
   void _addOrUpdateExpense() async {
     final formState = _formKey.currentState;
     if (formState == null) {
@@ -285,22 +300,19 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               id: newExpenseId, // Use generated ID
             );
 
-        // Save the new expense ID and rebuild to show receipt buttons
         if (mounted) {
-          setState(() {
-            _newExpenseId = newExpenseId;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم حفظ المصروف. يمكنك الآن إضافة الإيصالات')),
-          );
+          if (_wantsReceipt) {
+            setState(() {
+              _newExpenseId = newExpenseId;
+            });
+            await _scrollToReceipts();
+          } else {
+            Navigator.pop(context);
+          }
         }
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
-        );
-      }
+      // No snackbar per UX requirements.
     }
   }
 
@@ -555,10 +567,35 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               ),
               const SizedBox(height: 24),
 
+              if (!isEditing) ...[
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _wantsReceipt,
+                      onChanged: (value) {
+                        setState(() {
+                          _wantsReceipt = value ?? false;
+                        });
+                      },
+                    ),
+                    const Text('هل يوجد إيصال؟'),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    'يمكنك إضافته لاحقًا من التعديل.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               // Receipts section
-              if (isEditing || _newExpenseId != null) ...[
+              if (isEditing || (_wantsReceipt && _newExpenseId != null)) ...[
                 Text(
                   'الإيصالات',
+                  key: _receiptsSectionKey,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
@@ -611,7 +648,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                           : _addOrUpdateExpense,
                       child: Text(
                         _newExpenseId != null
-                            ? 'إغلاق'
+                            ? 'إضافة'
                             : (isEditing ? 'تحديث' : 'إضافة'),
                       ),
                     ),
