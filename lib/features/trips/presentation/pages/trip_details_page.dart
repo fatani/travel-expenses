@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/trip.dart';
+import '../../../expenses/presentation/pages/expense_list_page.dart';
 import '../providers/trips_providers.dart';
 
 class TripDetailsPage extends ConsumerWidget {
@@ -52,12 +53,15 @@ class TripDetailsPage extends ConsumerWidget {
                     Tab(text: 'التصدير'),
                   ],
                 ),
-                const Expanded(
+                Expanded(
                   child: TabBarView(
                     children: [
-                      _Placeholder(text: 'قريبًا: إدارة المصاريف'),
-                      _Placeholder(text: 'قريبًا: ملخص الرحلة'),
-                      _Placeholder(text: 'قريبًا: تصدير CSV'),
+                      _ExpensesTabContent(
+                        tripId: trip.id,
+                        tripCurrency: trip.defaultCurrency,
+                      ),
+                      const _Placeholder(text: 'قريبًا: ملخص الرحلة'),
+                      const _Placeholder(text: 'قريبًا: تصدير CSV'),
                     ],
                   ),
                 ),
@@ -117,6 +121,24 @@ class _HeaderCard extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+}
+
+class _ExpensesTabContent extends StatelessWidget {
+  final String tripId;
+  final String tripCurrency;
+
+  const _ExpensesTabContent({
+    required this.tripId,
+    required this.tripCurrency,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpenseListPage(
+      tripId: tripId,
+      tripCurrency: tripCurrency,
+    );
   }
 }
 
