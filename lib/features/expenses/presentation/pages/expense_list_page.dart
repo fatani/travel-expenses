@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/expense.dart';
+import '../providers/expense_filters_provider.dart';
 import '../providers/expenses_providers.dart';
+import '../providers/filtered_expenses_provider.dart';
 import 'add_edit_expense_page.dart';
 
 class ExpenseListPage extends ConsumerWidget {
@@ -17,48 +19,97 @@ class ExpenseListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final expensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
+    final originalExpensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
+    final filteredExpensesAsync = ref.watch(filteredExpensesProvider(tripId));
 
     return Scaffold(
-      body: expensesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('خطأ: $error')),
-        data: (expenses) {
-          if (expenses.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('لا توجد مصاريف بعد'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => _showAddExpenseSheet(context, ref),
-                    child: const Text('إضافة مصروف'),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'بحث',
+                      hintText: 'ابحث في مكان الشراء، موقع الشراء، الملاحظات',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                    onChanged: (value) {
+                      ref.read(expenseFiltersProvider.notifier).setQuery(value);
+                    },
                   ),
-                ],
-              ),
-            );
-          }
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: 'فلترة',
+                  onPressed: () => _showFiltersSheet(context),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: filteredExpensesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stackTrace) => Center(child: Text('خطأ: $error')),
+              data: (expenses) {
+                final originalExpenses = originalExpensesAsync.asData?.value;
+                if (expenses.isEmpty) {
+                  if (originalExpenses == null || originalExpenses.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text('لا توجد مصاريف'),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => _showAddExpenseSheet(context, ref),
+                            child: const Text('إضافة مصروف'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const Center(child: Text('لا توجد نتائج مطابقة'));
+                }
 
-          return ListView.builder(
-            itemCount: expenses.length,
-            itemBuilder: (context, index) {
-              final expense = expenses[index];
-              return _ExpenseListItem(
-                expense: expense,
-                tripId: tripId,
-                tripCurrency: tripCurrency,
-                onDelete: () => _showDeleteConfirmation(context, ref, expense),
-                onEdit: () => _showEditExpenseSheet(context, ref, expense),
-              );
-            },
-          );
-        },
+                return ListView.builder(
+                  itemCount: expenses.length,
+                  itemBuilder: (context, index) {
+                    final expense = expenses[index];
+                    return _ExpenseListItem(
+                      expense: expense,
+                      tripId: tripId,
+                      tripCurrency: tripCurrency,
+                      onDelete: () => _showDeleteConfirmation(context, ref, expense),
+                      onEdit: () => _showEditExpenseSheet(context, ref, expense),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddExpenseSheet(context, ref),
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  void _showFiltersSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return const Padding(
+          padding: EdgeInsets.only(bottom: 16),
+          child: ExpenseFiltersSheet(),
+        );
+      },
     );
   }
 
@@ -128,6 +179,170 @@ class ExpenseListPage extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+class ExpenseFiltersSheet extends ConsumerWidget {
+  const ExpenseFiltersSheet({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final filters = ref.watch(expenseFiltersProvider);
+    final notifier = ref.read(expenseFiltersProvider.notifier);
+    final paymentOptions = <MapEntry<String?, String>>[
+      MapEntry(null, 'الكل'),
+      const MapEntry('cash', 'نقد'),
+      const MapEntry('card', 'بطاقة'),
+      const MapEntry('wallet', 'محفظة'),
+      const MapEntry('other', 'أخرى'),
+    ];
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'فلترة المصاريف',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.start,
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<ExpenseCategory?>(
+              value: filters.category,
+              decoration: const InputDecoration(
+                labelText: 'الفئة',
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('الكل'),
+                ),
+                ...ExpenseCategory.values.map(
+                  (category) => DropdownMenuItem(
+                    value: category,
+                    child: Text(category.value),
+                  ),
+                ),
+              ],
+              onChanged: notifier.setCategory,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'طريقة الدفع',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: paymentOptions.map((option) {
+                return ChoiceChip(
+                  label: Text(option.value),
+                  selected: filters.paymentMethodType == option.key,
+                  onSelected: (_) => notifier.setPaymentMethodType(option.key),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'نطاق التاريخ',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pickFromDate(context, notifier, filters),
+                    child: Text(_formatDateLabel('من', filters.from)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pickToDate(context, notifier, filters),
+                    child: Text(_formatDateLabel('إلى', filters.to)),
+                  ),
+                ),
+              ],
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => notifier.setDateRange(null, null),
+                child: const Text('مسح التاريخ'),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: notifier.reset,
+                    child: const Text('إعادة ضبط'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('تطبيق'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFromDate(
+    BuildContext context,
+    ExpenseFiltersNotifier notifier,
+    ExpenseFilters filters,
+  ) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: filters.from ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      notifier.setDateRange(picked, filters.to);
+    }
+  }
+
+  Future<void> _pickToDate(
+    BuildContext context,
+    ExpenseFiltersNotifier notifier,
+    ExpenseFilters filters,
+  ) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: filters.to ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      notifier.setDateRange(filters.from, picked);
+    }
+  }
+
+  String _formatDateLabel(String prefix, DateTime? date) {
+    if (date == null) {
+      return prefix;
+    }
+    final formatted =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return '$prefix: $formatted';
   }
 }
 
