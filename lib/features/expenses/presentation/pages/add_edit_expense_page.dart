@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/models/expense.dart';
 import '../../../receipts/presentation/providers/receipts_providers.dart';
@@ -28,6 +29,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   late String _selectedCategory;
   late String _selectedCurrency;
   late DateTime _selectedDate;
+  String? _newExpenseId; // Track newly created expense
 
   final List<String> _categories = [
     'الطعام',
@@ -84,7 +86,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
     try {
       if (widget.expense != null) {
-        // Update
+        // Update existing expense
         final updatedExpense = widget.expense!.copyWith(
           amount: amount,
           currency: _selectedCurrency,
@@ -95,8 +97,14 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
         await ref.read(expenseProvider.notifier).updateExpense(
               expense: updatedExpense,
             );
+
+        if (mounted) {
+          Navigator.pop(context);
+        }
       } else {
-        // Insert
+        // Insert new expense with generated ID
+        final newExpenseId = const Uuid().v4();
+
         await ref.read(expenseProvider.notifier).insertExpense(
               tripId: widget.tripId,
               amount: amount,
@@ -104,11 +112,18 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               date: _selectedDate,
               category: _selectedCategory,
               note: _noteController.text.isEmpty ? null : _noteController.text,
+              id: newExpenseId, // Use generated ID
             );
-      }
 
-      if (mounted) {
-        Navigator.pop(context);
+        // Save the new expense ID and rebuild to show receipt buttons
+        if (mounted) {
+          setState(() {
+            _newExpenseId = newExpenseId;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم حفظ المصروف. يمكنك الآن إضافة الإيصالات')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -232,7 +247,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
             const SizedBox(height: 24),
 
             // Receipts section
-            if (isEditing) ...[
+            if (isEditing || _newExpenseId != null) ...[
               Text(
                 'الإيصالات',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -242,11 +257,9 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 children: [
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: !isEditing
-                          ? null
-                          : () => ref
-                              .read(receiptProvider.notifier)
-                              .addReceiptFromCamera(widget.expense!.id),
+                      onPressed: () => ref
+                          .read(receiptProvider.notifier)
+                          .addReceiptFromCamera(_newExpenseId ?? widget.expense!.id),
                       icon: const Icon(Icons.camera_alt),
                       label: const Text('كاميرا'),
                     ),
@@ -254,11 +267,9 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: !isEditing
-                          ? null
-                          : () => ref
-                              .read(receiptProvider.notifier)
-                              .addReceiptFromGallery(widget.expense!.id),
+                      onPressed: () => ref
+                          .read(receiptProvider.notifier)
+                          .addReceiptFromGallery(_newExpenseId ?? widget.expense!.id),
                       icon: const Icon(Icons.photo_library),
                       label: const Text('معرض'),
                     ),
@@ -267,8 +278,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               ),
               const SizedBox(height: 12),
               ReceiptGallery(
-                expenseId: isEditing ? widget.expense!.id : '',
-                isEditing: isEditing,
+                expenseId: _newExpenseId ?? (isEditing ? widget.expense!.id : ''),
+                isEditing: true,
               ),
               const SizedBox(height: 24),
             ] else
@@ -286,8 +297,14 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _addOrUpdateExpense,
-                    child: Text(isEditing ? 'تحديث' : 'إضافة'),
+                    onPressed: _newExpenseId != null
+                        ? () => Navigator.pop(context)
+                        : _addOrUpdateExpense,
+                    child: Text(
+                      _newExpenseId != null
+                          ? 'إغلاق'
+                          : (isEditing ? 'تحديث' : 'إضافة'),
+                    ),
                   ),
                 ),
               ],

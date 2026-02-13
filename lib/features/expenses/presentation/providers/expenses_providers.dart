@@ -27,11 +27,12 @@ class ExpenseNotifier extends StateNotifier<AsyncValue<void>> {
     required DateTime date,
     required String category,
     String? note,
+    String? id, // Optional: use this ID if provided
   }) async {
     state = const AsyncValue.loading();
     try {
       final expense = Expense(
-        id: const Uuid().v4(),
+        id: id ?? const Uuid().v4(),
         tripId: tripId,
         amount: amount,
         currency: currency,

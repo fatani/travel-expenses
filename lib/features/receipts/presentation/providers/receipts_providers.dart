@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/db/db_providers.dart';
 import '../../../../core/models/receipt.dart';
@@ -23,10 +24,12 @@ final watchReceiptsByExpenseProvider =
 class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
   final ReceiptStorage storage;
   final ImagePicker picker;
+  final Ref ref;
 
   ReceiptNotifier({
     required this.storage,
     required this.picker,
+    required this.ref,
   }) : super(const AsyncValue.data(null));
 
   Future<void> addReceiptFromCamera(String expenseId) async {
@@ -35,6 +38,8 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
       final image = await picker.pickImage(source: ImageSource.camera);
       if (image != null) {
         await _processAndSaveReceipt(expenseId, File(image.path));
+        state = const AsyncValue.data(null);
+      } else {
         state = const AsyncValue.data(null);
       }
     } catch (e, st) {
@@ -49,6 +54,8 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
       if (image != null) {
         await _processAndSaveReceipt(expenseId, File(image.path));
         state = const AsyncValue.data(null);
+      } else {
+        state = const AsyncValue.data(null);
       }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -56,14 +63,20 @@ class ReceiptNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> _processAndSaveReceipt(String expenseId, File imageFile) async {
-    // Save image to local storage
-    await storage.saveReceiptImage(expenseId, imageFile);
-    // Image saved successfully - repository insert handled by UI layer
-  }
+    // 1. Save image to local storage
+    final localPath = await storage.saveReceiptImage(expenseId, imageFile);
 
-  String? getLastSavedPath() {
-    // Placeholder - actual path returned from _processAndSaveReceipt
-    return null;
+    // 2. Create receipt record with UUID
+    final receipt = Receipt(
+      id: const Uuid().v4(),
+      expenseId: expenseId,
+      localPath: localPath,
+      createdAt: DateTime.now(),
+    );
+
+    // 3. Insert into database
+    final repository = ref.read(repositoryProvider);
+    await repository.insertReceipt(receipt);
   }
 }
 
@@ -71,12 +84,11 @@ final receiptProvider =
     StateNotifierProvider<ReceiptNotifier, AsyncValue<void>>((ref) {
   final storage = ref.watch(receiptStorageProvider);
   final picker = ref.watch(imagePickerProvider);
-  return ReceiptNotifier(storage: storage, picker: picker);
+  return ReceiptNotifier(storage: storage, picker: picker, ref: ref);
 });
 
 /// Provider for calling repository delete
 final deleteReceiptProvider =
     FutureProvider.autoDispose.family<void, (String, String)>((ref, _) {
-  // Async operation will be handled in UI
   return Future<void>.value();
 });
