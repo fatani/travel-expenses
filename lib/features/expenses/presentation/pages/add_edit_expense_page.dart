@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/expense.dart';
+import '../../../receipts/presentation/providers/receipts_providers.dart';
+import '../../../receipts/presentation/widgets/receipt_gallery.dart';
 import '../providers/expenses_providers.dart';
 
 class AddEditExpensePage extends ConsumerStatefulWidget {
@@ -228,6 +230,49 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               maxLines: 3,
             ),
             const SizedBox(height: 24),
+
+            // Receipts section
+            if (isEditing) ...[
+              Text(
+                'الإيصالات',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: !isEditing
+                          ? null
+                          : () => ref
+                              .read(receiptProvider.notifier)
+                              .addReceiptFromCamera(widget.expense!.id),
+                      icon: const Icon(Icons.camera_alt),
+                      label: const Text('كاميرا'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: !isEditing
+                          ? null
+                          : () => ref
+                              .read(receiptProvider.notifier)
+                              .addReceiptFromGallery(widget.expense!.id),
+                      icon: const Icon(Icons.photo_library),
+                      label: const Text('معرض'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ReceiptGallery(
+                expenseId: isEditing ? widget.expense!.id : '',
+                isEditing: isEditing,
+              ),
+              const SizedBox(height: 24),
+            ] else
+              const SizedBox(height: 12),
 
             // Buttons
             Row(
