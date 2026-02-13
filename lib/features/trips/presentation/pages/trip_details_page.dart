@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/trip.dart';
 import '../../../../core/models/expense.dart';
+import '../../../../core/widgets/error_state.dart';
 import '../../../expenses/presentation/models/trip_summary.dart';
 import '../../../expenses/presentation/providers/expense_filters_provider.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
@@ -160,34 +161,38 @@ class _SummaryTabContent extends ConsumerWidget {
 
     return summaryAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('خطأ: $error'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                ref.invalidate(tripSummaryProvider(tripId));
-              },
-              child: const Text('إعادة المحاولة'),
-            ),
-          ],
-        ),
+      error: (error, stackTrace) => ErrorState(
+        title: 'حدث خطأ أثناء تحميل البيانات.',
+        actionLabel: 'إعادة المحاولة',
+        onAction: () => ref.invalidate(tripSummaryProvider(tripId)),
       ),
       data: (summary) {
         if (summary.totalByCurrency.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('لا توجد مصاريف بعد'),
-                const SizedBox(height: 8),
-                Text(
-                  'أضف أول مصروف من تبويب المصاريف',
-                  style: Theme.of(context).textTheme.bodySmall,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'لا يوجد ملخص بعد',
+                        style: Theme.of(context).textTheme.titleMedium,
+                        textDirection: TextDirection.rtl,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'أضف مصاريف لعرض الإجمالي والتوزيعات.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
           );
         }

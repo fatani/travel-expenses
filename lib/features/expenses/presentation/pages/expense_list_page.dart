@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/error_state.dart';
 import '../../../../core/models/expense.dart';
 import '../providers/expense_filters_provider.dart';
 import '../providers/expenses_providers.dart';
@@ -53,23 +55,22 @@ class ExpenseListPage extends ConsumerWidget {
           Expanded(
             child: filteredExpensesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => Center(child: Text('خطأ: $error')),
+              error: (error, stackTrace) => ErrorState(
+                title: 'حدث خطأ أثناء تحميل البيانات.',
+                actionLabel: 'إعادة المحاولة',
+                onAction: () {
+                  ref.invalidate(filteredExpensesProvider(tripId));
+                  ref.invalidate(watchExpensesByTripProvider(tripId));
+                },
+              ),
               data: (expenses) {
                 final originalExpenses = originalExpensesAsync.asData?.value;
                 if (expenses.isEmpty) {
                   if (originalExpenses == null || originalExpenses.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text('لا توجد مصاريف'),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => _showAddExpenseSheet(context, ref),
-                            child: const Text('إضافة مصروف'),
-                          ),
-                        ],
-                      ),
+                    return const EmptyState(
+                      icon: Icons.receipt_long,
+                      title: 'لا توجد مصاريف بعد',
+                      subtitle: 'أضف أول مصروف لتظهر البيانات هنا.',
                     );
                   }
                   return const Center(child: Text('لا توجد نتائج مطابقة'));

@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/widgets/error_state.dart';
+import '../../../expenses/presentation/providers/expenses_providers.dart';
 import '../../providers/trip_csv_export_provider.dart';
 import '../utils/csv_downloader.dart';
 
@@ -68,85 +70,103 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Card header
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'تصدير البيانات',
-                    style: Theme.of(context).textTheme.titleLarge,
-                    textDirection: TextDirection.rtl,
+    final expensesAsync = ref.watch(watchExpensesByTripProvider(widget.tripId));
+
+    return expensesAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => ErrorState(
+        title: 'حدث خطأ أثناء تحميل البيانات.',
+        actionLabel: 'إعادة المحاولة',
+        onAction: () => ref.invalidate(watchExpensesByTripProvider(widget.tripId)),
+      ),
+      data: (expenses) {
+        final isEmpty = expenses.isEmpty;
+        final statusMessage = isEmpty ? 'لا توجد مصاريف لتصديرها.' : _message;
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Card header
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'تصدير البيانات',
+                        style: Theme.of(context).textTheme.titleLarge,
+                        textDirection: TextDirection.rtl,
+                      ),
+                      const SizedBox(height: 8.0),
+                      Text(
+                        'سيتم تصدير جميع مصاريف الرحلة بصيغة CSV.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textDirection: TextDirection.rtl,
+                      ),
+                      const SizedBox(height: 8.0),
+                      Text(
+                        'يشمل: التاريخ، المبلغ، العملة، الفئة، مكان الشراء، طريقة الدفع، الملاحظات، وعدد الإيصالات.',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8.0),
-                  Text(
-                    'سيتم تصدير جميع مصاريف الرحلة بصيغة CSV.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                    textDirection: TextDirection.rtl,
+                ),
+              ),
+              const SizedBox(height: 24.0),
+
+              // Export button
+              ElevatedButton(
+                onPressed: _isLoading || isEmpty ? null : _handleExport,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('تصدير CSV'),
+              ),
+              const SizedBox(height: 16.0),
+
+              // Status message
+              if (statusMessage != null)
+                Container(
+                  padding: const EdgeInsets.all(12.0),
+                  decoration: BoxDecoration(
+                    color: statusMessage.contains('خطأ') ||
+                            statusMessage.contains('تعذر')
+                        ? Colors.red[50]
+                        : Colors.green[50],
+                    borderRadius: BorderRadius.circular(8.0),
+                    border: Border.all(
+                      color: statusMessage.contains('خطأ') ||
+                              statusMessage.contains('تعذر')
+                          ? Colors.red[200]!
+                          : Colors.green[200]!,
+                    ),
                   ),
-                  const SizedBox(height: 8.0),
-                  Text(
-                    'يشمل: التاريخ، المبلغ، العملة، الفئة، مكان الشراء، طريقة الدفع، الملاحظات، وعدد الإيصالات.',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
+                  child: Text(
+                    statusMessage,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: statusMessage.contains('خطأ') ||
+                                  statusMessage.contains('تعذر')
+                              ? Colors.red[800]
+                              : Colors.green[800],
                         ),
                     textDirection: TextDirection.rtl,
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24.0),
-
-          // Export button
-          ElevatedButton(
-            onPressed: _isLoading ? null : _handleExport,
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  )
-                : const Text('تصدير CSV'),
-          ),
-          const SizedBox(height: 16.0),
-
-          // Status message
-          if (_message != null)
-            Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                color: _message!.contains('خطأ') || _message!.contains('تعذر')
-                    ? Colors.red[50]
-                    : Colors.green[50],
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(
-                  color: _message!.contains('خطأ') || _message!.contains('تعذر')
-                      ? Colors.red[200]!
-                      : Colors.green[200]!,
                 ),
-              ),
-              child: Text(
-                _message!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: _message!.contains('خطأ') || _message!.contains('تعذر')
-                          ? Colors.red[800]
-                          : Colors.green[800],
-                    ),
-                textDirection: TextDirection.rtl,
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

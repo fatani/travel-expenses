@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/error_state.dart';
 import '../providers/trips_providers.dart';
 
 class TripListPage extends ConsumerWidget {
@@ -47,23 +49,19 @@ class TripListPage extends ConsumerWidget {
       ),
       body: tripsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
-          child: Text('خطأ: $error'),
+        error: (error, stackTrace) => ErrorState(
+          title: 'حدث خطأ أثناء تحميل البيانات.',
+          actionLabel: 'إعادة المحاولة',
+          onAction: () => ref.invalidate(tripsStreamProvider),
         ),
         data: (trips) {
           if (trips.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('لا توجد رحلات'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () => context.push('/trips/new'),
-                    child: const Text('إضافة رحلة'),
-                  ),
-                ],
-              ),
+            return EmptyState(
+              icon: Icons.card_travel,
+              title: 'لا توجد رحلات بعد',
+              subtitle: 'ابدأ بإضافة رحلة جديدة لتتبع المصاريف.',
+              actionLabel: 'إضافة رحلة',
+              onAction: () => context.push('/trips/new'),
             );
           }
 
