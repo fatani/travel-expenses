@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -44,13 +45,18 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
 
       if (mounted) {
         setState(() {
-          _message = result != null
-              ? 'تم تنزيل الملف: $result'
-              : 'التنزيل المباشر متاح على الويب حاليًا.';
+          if (result != null) {
+            _message = 'تم تنزيل الملف: $result';
+          } else if (!kIsWeb) {
+            _message = 'التنزيل المباشر متاح على الويب حاليًا.';
+          } else {
+            _message = 'تعذر إنشاء الملف';
+          }
           _isLoading = false;
         });
       }
     } catch (e) {
+      debugPrint('Export error: $e');
       if (mounted) {
         setState(() {
           _message = 'تعذر إنشاء الملف';

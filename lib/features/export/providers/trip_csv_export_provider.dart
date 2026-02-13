@@ -3,8 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/db_providers.dart';
-import '../../../core/models/expense.dart';
-import '../../../core/models/trip.dart';
 import '../../expenses/presentation/providers/expenses_providers.dart';
 import '../../trips/presentation/providers/trips_providers.dart';
 import '../services/csv_export_service.dart';
@@ -42,28 +40,18 @@ final tripCsvExportProvider = FutureProvider.autoDispose.family<Uint8List, Strin
     final csvService = ref.watch(csvExportServiceProvider);
 
     // Get trip
-    final tripAsync = ref.watch(tripByIdProvider(tripId));
-    if (tripAsync is! AsyncData<Trip?>) {
-      throw Exception('Trip not found');
-    }
-    final trip = tripAsync.value;
+    final trip = await ref.watch(tripByIdProvider(tripId).future);
     if (trip == null) {
-      throw Exception('Trip is null');
+      throw Exception('Trip not found');
     }
 
     // Get expenses
-    final expensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
-    if (expensesAsync is! AsyncData<List<Expense>?>) {
-      throw Exception('Failed to load expenses');
-    }
-    final expensesList = expensesAsync.value ?? [];
+    final expensesList =
+      await ref.watch(watchExpensesByTripProvider(tripId).future);
 
     // Get receipts count
-    final receiptsCountAsync = ref.watch(receiptsByTripProvider(tripId));
-    if (receiptsCountAsync is! AsyncData<Map<String, int>>) {
-      throw Exception('Failed to load receipts count');
-    }
-    final receiptsCount = receiptsCountAsync.value;
+    final receiptsCount =
+        await ref.watch(receiptsByTripProvider(tripId).future);
 
     // Generate CSV
     return csvService.buildTripExpensesCsvBytes(
@@ -78,11 +66,7 @@ final tripCsvExportProvider = FutureProvider.autoDispose.family<Uint8List, Strin
 final csvExportFilenameProvider =
     FutureProvider.autoDispose.family<String, String>(
   (ref, tripId) async {
-    final tripAsync = ref.watch(tripByIdProvider(tripId));
-    if (tripAsync is! AsyncData<Trip?>) {
-      return 'trip_expenses.csv';
-    }
-    final trip = tripAsync.value;
+    final trip = await ref.watch(tripByIdProvider(tripId).future);
     if (trip == null) {
       return 'trip_expenses.csv';
     }
