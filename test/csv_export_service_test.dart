@@ -275,4 +275,247 @@ void main() {
     expect(csv.contains('USD'), true);
     expect(csv.contains('EUR'), true);
   });
+
+  test('CSV includes payment brand and label fields', () {
+    final expenses = [
+      _expense(
+        id: '1',
+        amount: 100.0,
+        currency: 'USD',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        paymentMethod: 'card',
+        paymentMethodBrand: 'mastercard',
+        paymentMethodLabel: 'فرسان ساب',
+      ),
+    ];
+
+    final csv = service.buildTripExpensesCsv(
+      trip: _createTrip(name: 'Test Trip', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {},
+    );
+
+    expect(csv.contains('mastercard'), true);
+    expect(csv.contains('فرسان ساب'), true);
+  });
+
+  test('CSV includes location_text field', () {
+    final expenses = [
+      _expense(
+        id: '1',
+        amount: 100.0,
+        currency: 'USD',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        paymentMethod: 'card',
+        locationText: 'مطار الدوحة',
+      ),
+    ];
+
+    final csv = service.buildTripExpensesCsv(
+      trip: _createTrip(name: 'Test Trip', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {},
+    );
+
+    expect(csv.contains('مطار الدوحة'), true);
+  });
+
+  test('CSV row with payment brand and location renders all fields', () {
+    final expenses = [
+      _expense(
+        id: '2',
+        amount: 30.0,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        paymentMethod: 'card',
+        paymentMethodBrand: 'mastercard',
+        paymentMethodLabel: 'فرسان ساب',
+        locationText: 'مطار الدوحة',
+        note: null,
+      ),
+    ];
+
+    final csv = service.buildTripExpensesCsv(
+      trip: _createTrip(name: 'Test Trip', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {'2': 1},
+    );
+
+    final lines = csv.split('\n');
+    expect(lines.length, 2); // header + 1 expense
+    final dataRow = lines[1];
+
+    // Verify specific fields in the row
+    expect(dataRow.contains('فندق ماريوت'), true);
+    expect(dataRow.contains('mastercard'), true);
+    expect(dataRow.contains('فرسان ساب'), true);
+    expect(dataRow.contains('مطار الدوحة'), true);
+    expect(dataRow.endsWith(',true,1'), true); // has_receipts=true, receipts_count=1
+  });
+
+  test(
+      'CSV with complex spec data (SAR/GBP/EUR multi-currency with Arabic)',
+      () {
+    final expenses = [
+      _expense(
+        id: '1',
+        amount: 20.0,
+        currency: 'SAR',
+        category: 'الطعام',
+        merchant: 'غير معروف',
+        paymentMethod: 'wallet',
+        note: null,
+      ),
+      _expense(
+        id: '2',
+        amount: 30.0,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        paymentMethod: 'card',
+        paymentMethodBrand: 'mastercard',
+        paymentMethodLabel: 'فرسان ساب',
+        locationText: 'مطار الدوحة',
+        note: null,
+      ),
+      _expense(
+        id: '3',
+        amount: 63.0,
+        currency: 'EUR',
+        category: 'الإقامة',
+        merchant: 'فندق رامادا',
+        paymentMethod: 'card',
+        paymentMethodBrand: 'mastercard',
+        paymentMethodLabel: null,
+        locationText: null,
+        note: null,
+      ),
+      _expense(
+        id: '4',
+        amount: 300.0,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        paymentMethod: 'card',
+        note: 'وجبة',
+      ),
+    ];
+
+    final csv = service.buildTripExpensesCsv(
+      trip: _createTrip(name: 'Test Trip', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {
+        '2': 1,
+        '4': 2,
+      },
+    );
+
+    final lines = csv.split('\n');
+
+    // Should have header + 4 expenses
+    expect(lines.length, 5);
+
+    // Verify header is present
+    expect(
+      lines[0].startsWith(
+          'date,amount,currency,category,merchant,payment_type'),
+      true,
+    );
+
+    // Verify all currencies appear in CSV
+    expect(csv.contains('SAR'), true);
+    expect(csv.contains('GBP'), true);
+    expect(csv.contains('EUR'), true);
+
+    // Verify Arabic text is present
+    expect(csv.contains('غير معروف'), true);
+    expect(csv.contains('فندق ماريوت'), true);
+    expect(csv.contains('فندق رامادا'), true);
+    expect(csv.contains('مطعم صيني'), true);
+    expect(csv.contains('وجبة'), true);
+
+    // Verify payment brand/label/location for mariott row
+    expect(csv.contains('mastercard'), true);
+    expect(csv.contains('فرسان ساب'), true);
+    expect(csv.contains('مطار الدوحة'), true);
+
+    // Verify receipt counts
+    expect(csv.contains(',true,1'), true); // expense 2 has receipt
+    expect(csv.contains(',true,2'), true); // expense 4 has 2 receipts
+  });
+
+  test('CSV handles Arabic notes with proper UTF-8 encoding', () {
+    final expenses = [
+      _expense(
+        id: '1',
+        amount: 300.0,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        paymentMethod: 'card',
+        note: 'وجبة عشاء مميزة',
+      ),
+    ];
+
+    final bytes = service.buildTripExpensesCsvBytes(
+      trip: _createTrip(name: 'رحلة', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {},
+    );
+
+    final decoded = utf8.decode(bytes);
+    expect(decoded.contains('وجبة عشاء مميزة'), true);
+    expect(decoded.contains('مطعم صيني'), true);
+  });
+
+  test('CSV row count matches expenses count plus header', () {
+    final expenses = [
+      _expense(
+        id: '1',
+        amount: 20.0,
+        currency: 'SAR',
+        category: 'الطعام',
+        merchant: 'غير معروف',
+        paymentMethod: 'wallet',
+      ),
+      _expense(
+        id: '2',
+        amount: 30.0,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        paymentMethod: 'card',
+      ),
+      _expense(
+        id: '3',
+        amount: 63.0,
+        currency: 'EUR',
+        category: 'الإقامة',
+        merchant: 'فندق رامادا',
+        paymentMethod: 'card',
+      ),
+      _expense(
+        id: '4',
+        amount: 300.0,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        paymentMethod: 'card',
+      ),
+    ];
+
+    final csv = service.buildTripExpensesCsv(
+      trip: _createTrip(name: 'Test Trip', id: 'trip1'),
+      expenses: expenses,
+      receiptsCountByExpenseId: {},
+    );
+
+    final lines = csv.split('\n').where((line) => line.isNotEmpty).toList();
+    expect(lines.length, 5); // header + 4 data rows
+  });
 }
+
+

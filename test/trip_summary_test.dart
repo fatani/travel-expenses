@@ -179,4 +179,170 @@ void main() {
     expect(summary.totalByDay.length, 1);
     expect(summary.totalByDay[day], 50);
   });
+
+  test(
+      'buildTripSummary totals by currency (SAR/GBP/EUR multi-currency)',
+      () {
+    // Test data from spec:
+    // 1) 2026-02-13, 20 SAR, category=food
+    // 2) 2026-02-13, 30 GBP, category=lodging
+    // 3) 2026-02-13, 63 EUR, category=lodging
+    // 4) 2026-02-14, 300 EUR, category=food
+    // Expected totals: SAR=20, GBP=30, EUR=363
+
+    final items = [
+      _expense(
+        id: '1',
+        tripId: 't1',
+        amount: 20,
+        currency: 'SAR',
+        category: 'الطعام',
+        merchant: 'غير معروف',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '2',
+        tripId: 't1',
+        amount: 30,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '3',
+        tripId: 't1',
+        amount: 63,
+        currency: 'EUR',
+        category: 'الإقامة',
+        merchant: 'فندق رامادا',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '4',
+        tripId: 't1',
+        amount: 300,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        date: DateTime(2026, 2, 14),
+      ),
+    ];
+
+    final summary = buildTripSummary(items);
+
+    expect(summary.totalByCurrency['SAR'], 20);
+    expect(summary.totalByCurrency['GBP'], 30);
+    expect(summary.totalByCurrency['EUR'], 363); // 63 + 300
+    expect(summary.grandTotal, 413); // 20 + 30 + 363
+  });
+
+  test('buildTripSummary category totals (ignoring currency breakdown)', () {
+    // Test data:
+    // food: 20 SAR + 300 EUR = sum with different currencies
+    // lodging: 30 GBP + 63 EUR = sum with different currencies
+
+    final items = [
+      _expense(
+        id: '1',
+        tripId: 't1',
+        amount: 20,
+        currency: 'SAR',
+        category: 'الطعام',
+        merchant: 'غير معروف',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '2',
+        tripId: 't1',
+        amount: 30,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '3',
+        tripId: 't1',
+        amount: 63,
+        currency: 'EUR',
+        category: 'الإقامة',
+        merchant: 'فندق رامادا',
+        date: DateTime(2026, 2, 13),
+      ),
+      _expense(
+        id: '4',
+        tripId: 't1',
+        amount: 300,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        date: DateTime(2026, 2, 14),
+      ),
+    ];
+
+    final summary = buildTripSummary(items);
+
+    // Summary totals are aggregate (ignores currency breakdown)
+    // food: 20 + 300 = 320
+    // lodging: 30 + 63 = 93
+    expect(summary.totalByCategory[ExpenseCategory.food], 320);
+    expect(summary.totalByCategory[ExpenseCategory.lodging], 93);
+  });
+
+  test('buildTripSummary day breakdown (descending order preservation)', () {
+    // Test that day breakdown totals are correct
+    // 2026-02-13: SAR 20 + GBP 30 + EUR 63 = 113 (total)
+    // 2026-02-14: EUR 300
+
+    final day13 = DateTime(2026, 2, 13);
+    final day14 = DateTime(2026, 2, 14);
+
+    final items = [
+      _expense(
+        id: '1',
+        tripId: 't1',
+        amount: 20,
+        currency: 'SAR',
+        category: 'الطعام',
+        merchant: 'غير معروف',
+        date: day13,
+      ),
+      _expense(
+        id: '2',
+        tripId: 't1',
+        amount: 30,
+        currency: 'GBP',
+        category: 'الإقامة',
+        merchant: 'فندق ماريوت',
+        date: day13,
+      ),
+      _expense(
+        id: '3',
+        tripId: 't1',
+        amount: 63,
+        currency: 'EUR',
+        category: 'الإقامة',
+        merchant: 'فندق رامادا',
+        date: day13,
+      ),
+      _expense(
+        id: '4',
+        tripId: 't1',
+        amount: 300,
+        currency: 'EUR',
+        category: 'الطعام',
+        merchant: 'مطعم صيني',
+        date: day14,
+      ),
+    ];
+
+    final summary = buildTripSummary(items);
+
+    expect(summary.totalByDay[day13], 113); // 20 + 30 + 63
+    expect(summary.totalByDay[day14], 300);
+    expect(summary.totalByDay.length, 2);
+  });
 }
+
+
