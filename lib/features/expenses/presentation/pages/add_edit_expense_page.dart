@@ -628,6 +628,56 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                   isEditing: true,
                 ),
                 const SizedBox(height: 24),
+
+                // OCR Placeholder Section
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              size: 24,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'استخراج البيانات من الإيصال (قريبًا)',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'سيساعدك لاحقًا على تعبئة المبلغ، التاريخ، العملة، ومكان الشراء تلقائيًا.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: null,
+                            icon: const Icon(Icons.document_scanner_outlined),
+                            label: const Text('استخراج البيانات (قريبًا)'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'هذه الميزة ستعمل كاقتراحات، وستراجعها قبل الحفظ.',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
               ] else
                 const SizedBox(height: 12),
 
