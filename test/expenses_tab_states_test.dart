@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:travel_expenses/core/models/trip.dart';
 import 'package:travel_expenses/core/models/expense.dart';
 import 'package:travel_expenses/features/expenses/presentation/pages/expense_list_page.dart';
 import 'package:travel_expenses/features/expenses/presentation/providers/expense_filters_provider.dart';
