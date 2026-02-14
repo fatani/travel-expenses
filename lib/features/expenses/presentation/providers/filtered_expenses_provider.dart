@@ -8,7 +8,7 @@ final filteredExpensesProvider =
     Provider.autoDispose.family<AsyncValue<List<Expense>>, String>(
   (ref, tripId) {
     final expensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
-    final filters = ref.watch(expenseFiltersProvider);
+    final filters = ref.watch(expenseFiltersProvider(tripId));
     return expensesAsync.whenData(
       (items) => applyExpenseFilters(items, filters),
     );

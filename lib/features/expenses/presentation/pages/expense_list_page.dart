@@ -39,7 +39,7 @@ class ExpenseListPage extends ConsumerWidget {
                       prefixIcon: Icon(Icons.search),
                     ),
                     onChanged: (value) {
-                      ref.read(expenseFiltersProvider.notifier).setQuery(value);
+                      ref.read(expenseFiltersProvider(tripId).notifier).setQuery(value);
                     },
                   ),
                 ),
@@ -73,7 +73,31 @@ class ExpenseListPage extends ConsumerWidget {
                       subtitle: 'أضف أول مصروف لتظهر البيانات هنا.',
                     );
                   }
-                  return const Center(child: Text('لا توجد نتائج مطابقة'));
+                  // Has expenses but filtered results are empty
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.search_off, size: 48, color: Colors.grey[500]),
+                          const SizedBox(height: 12),
+                          Text(
+                            'لا توجد نتائج مطابقة',
+                            style: Theme.of(context).textTheme.titleMedium,
+                            textDirection: TextDirection.rtl,
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () {
+                              ref.read(expenseFiltersProvider(tripId).notifier).reset();
+                            },
+                            child: const Text('مسح البحث وإعادة الضبط'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
                 }
 
                 return ListView.builder(
@@ -106,9 +130,9 @@ class ExpenseListPage extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: ExpenseFiltersSheet(),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: ExpenseFiltersSheet(tripId: tripId),
         );
       },
     );
@@ -184,12 +208,17 @@ class ExpenseListPage extends ConsumerWidget {
 }
 
 class ExpenseFiltersSheet extends ConsumerWidget {
-  const ExpenseFiltersSheet({super.key});
+  final String tripId;
+
+  const ExpenseFiltersSheet({
+    required this.tripId,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final filters = ref.watch(expenseFiltersProvider);
-    final notifier = ref.read(expenseFiltersProvider.notifier);
+    final filters = ref.watch(expenseFiltersProvider(tripId));
+    final notifier = ref.read(expenseFiltersProvider(tripId).notifier);
     final paymentOptions = <MapEntry<String?, String>>[
       MapEntry(null, 'الكل'),
       const MapEntry('cash', 'نقد'),

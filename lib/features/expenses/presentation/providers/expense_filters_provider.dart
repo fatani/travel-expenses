@@ -30,9 +30,10 @@ class ExpenseFilters {
   });
 }
 
-class ExpenseFiltersNotifier extends Notifier<ExpenseFilters> {
+class ExpenseFiltersNotifier
+    extends AutoDisposeFamilyNotifier<ExpenseFilters, String> {
   @override
-  ExpenseFilters build() => const ExpenseFilters();
+  ExpenseFilters build(String arg) => const ExpenseFilters();
 
   void setQuery(String value) {
     state = ExpenseFilters(
@@ -79,8 +80,8 @@ class ExpenseFiltersNotifier extends Notifier<ExpenseFilters> {
   }
 }
 
-final expenseFiltersProvider =
-    NotifierProvider<ExpenseFiltersNotifier, ExpenseFilters>(
+final expenseFiltersProvider = NotifierProvider.autoDispose
+    .family<ExpenseFiltersNotifier, ExpenseFilters, String>(
   ExpenseFiltersNotifier.new,
 );
 

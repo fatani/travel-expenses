@@ -151,7 +151,8 @@ void main() {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    final notifier = container.read(expenseFiltersProvider.notifier);
+    const tripId = 'test-trip';
+    final notifier = container.read(expenseFiltersProvider(tripId).notifier);
     notifier.setQuery('test');
     notifier.setCategory(ExpenseCategory.shopping);
     notifier.setPaymentMethodType('wallet');
@@ -159,7 +160,7 @@ void main() {
 
     notifier.reset();
 
-    final state = container.read(expenseFiltersProvider);
+    final state = container.read(expenseFiltersProvider(tripId));
     expect(state.query, '');
     expect(state.category, isNull);
     expect(state.paymentMethodType, isNull);
