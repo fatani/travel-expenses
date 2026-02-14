@@ -1,11 +1,11 @@
 {
-    "name": "travel_expenses",
-    "short_name": "travel_expenses",
-    "start_url": ".",
+    "name": "مصاريف السفر",
+    "short_name": "مصاريف",
+    "start_url": "./",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F5F5F5",
+    "theme_color": "#F5F5F5",
+    "description": "إدارة مصاريف السفر وتتبعها بسهولة.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
