@@ -7,6 +7,8 @@ import '../../../../core/models/expense.dart';
 import '../../../../core/models/receipt.dart';
 import '../../../receipts/presentation/providers/receipts_providers.dart';
 import '../../../receipts/presentation/widgets/receipt_gallery.dart';
+import '../models/expense_draft.dart';
+import '../providers/expense_draft_provider.dart';
 import '../providers/expenses_providers.dart';
 import '../providers/ocr_suggestion_provider.dart';
 
@@ -54,6 +56,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   bool _wantsReceipt = false;
   String? _selectedReceiptId;
   bool _showAppliedSuggestionMessage = false;
+  bool _draftAppliedOnce = false;
+  bool _draftUpdatesEnabled = false;
 
   final FocusNode _amountFocusNode = FocusNode();
   final FocusNode _currencyFocusNode = FocusNode();
@@ -124,16 +128,26 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _selectedPaymentBrand = null;
       _selectedDate = DateTime.now();
       _wantsReceipt = false;
-      _loadPaymentMethodPreference();
+      final draft = ref.read(expenseDraftProvider(widget.tripId));
+      if (!_draftAppliedOnce && !draft.isEmpty) {
+        _applyDraft(draft);
+      } else {
+        _loadPaymentMethodPreference();
+      }
+      _draftAppliedOnce = true;
     }
 
     if (!_shouldShowPaymentDetails(_selectedPaymentMethod)) {
       _resetPaymentDetails();
     }
+
+    _bindDraftListeners();
+    _draftUpdatesEnabled = true;
   }
 
   @override
   void dispose() {
+    _removeDraftListeners();
     _amountController.dispose();
     _noteController.dispose();
     _merchantController.dispose();
@@ -188,6 +202,100 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     if (persist) {
       _persistPaymentMethod(value);
     }
+    _updateDraft();
+  }
+
+  void _bindDraftListeners() {
+    _amountController.addListener(_updateDraft);
+    _merchantController.addListener(_updateDraft);
+    _locationController.addListener(_updateDraft);
+    _noteController.addListener(_updateDraft);
+    _paymentLabelController.addListener(_updateDraft);
+  }
+
+  void _removeDraftListeners() {
+    _amountController.removeListener(_updateDraft);
+    _merchantController.removeListener(_updateDraft);
+    _locationController.removeListener(_updateDraft);
+    _noteController.removeListener(_updateDraft);
+    _paymentLabelController.removeListener(_updateDraft);
+  }
+
+  void _applyDraft(ExpenseDraft draft) {
+    if (draft.amountText != null) {
+      _amountController.text = draft.amountText!;
+    }
+    if (draft.merchant != null) {
+      _merchantController.text = draft.merchant!;
+    }
+    if (draft.locationText != null) {
+      _locationController.text = draft.locationText!;
+    }
+    if (draft.notes != null) {
+      _noteController.text = draft.notes!;
+    }
+    if (draft.paymentLabel != null) {
+      _paymentLabelController.text = draft.paymentLabel!;
+    }
+    if (draft.currencyCode != null) {
+      _selectedCurrency = draft.currencyCode!;
+    }
+    if (draft.categoryId != null) {
+      _selectedCategory = draft.categoryId!;
+    }
+    if (draft.paymentMethodType != null) {
+      _selectedPaymentMethod = draft.paymentMethodType!;
+    }
+    if (draft.paymentBrand != null) {
+      _selectedPaymentBrand = draft.paymentBrand;
+    }
+    if (draft.date != null) {
+      _selectedDate = draft.date!;
+    }
+    _wantsReceipt = draft.hasReceipts;
+
+    if (!_shouldShowPaymentDetails(_selectedPaymentMethod)) {
+      _resetPaymentDetails();
+    } else {
+      final brands = _getBrandOptions();
+      if (_selectedPaymentBrand != null && !brands.containsKey(_selectedPaymentBrand)) {
+        _selectedPaymentBrand = null;
+      }
+    }
+  }
+
+  ExpenseDraft _buildDraft() {
+    return ExpenseDraft(
+      amountText: _amountController.text.trim().isEmpty
+          ? null
+          : _amountController.text.trim(),
+      currencyCode: _selectedCurrency,
+      categoryId: _selectedCategory,
+      date: _selectedDate,
+      merchant: _merchantController.text.trim().isEmpty
+          ? null
+          : _merchantController.text.trim(),
+      paymentMethodType: _selectedPaymentMethod,
+      paymentBrand: _selectedPaymentBrand,
+      paymentLabel: _paymentLabelController.text.trim().isEmpty
+          ? null
+          : _paymentLabelController.text.trim(),
+      locationText: _locationController.text.trim().isEmpty
+          ? null
+          : _locationController.text.trim(),
+      notes: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
+      hasReceipts: _wantsReceipt,
+    );
+  }
+
+  void _updateDraft() {
+    if (widget.expense != null || !_draftUpdatesEnabled) {
+      return;
+    }
+
+    ref.read(expenseDraftProvider(widget.tripId).notifier).set(_buildDraft());
   }
 
   void _onPaymentMethodChanged(String value) {
@@ -370,6 +478,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       location: locationChanged,
       notes: notesChanged,
     );
+    _updateDraft();
   }
 
   Future<void> _scrollToReceipts() async {
@@ -453,6 +562,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               id: newExpenseId, // Use generated ID
             );
 
+        ref.read(expenseDraftProvider(widget.tripId).notifier).clear();
+
         if (mounted) {
           if (_wantsReceipt) {
             setState(() {
@@ -481,6 +592,54 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       setState(() {
         _selectedDate = picked;
       });
+      _updateDraft();
+    }
+  }
+
+  Future<void> _handleExit() async {
+    if (widget.expense != null) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final draft = ref.read(expenseDraftProvider(widget.tripId));
+    if (draft.isEmpty) {
+      Navigator.pop(context);
+      return;
+    }
+
+    final shouldKeepDraft = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('حفظ المسودة؟'),
+          content: const Text(
+            'لديك بيانات غير محفوظة. هل تريد حفظها كمسودة للعودة لاحقًا؟',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('تجاهل'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('حفظ'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (!mounted || shouldKeepDraft == null) {
+      return;
+    }
+
+    if (!shouldKeepDraft) {
+      ref.read(expenseDraftProvider(widget.tripId).notifier).clear();
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
     }
   }
 
@@ -495,16 +654,24 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       : const AsyncValue.data(<Receipt>[]);
     final ocrSuggestionAsync = ref.watch(ocrSuggestionProvider(draftKey));
 
-    return SingleChildScrollView(
-      controller: _scrollController,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) {
+          return;
+        }
+        await _handleExit();
+      },
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
               // Title
               Text(
                 isEditing ? 'تعديل مصروف' : 'إضافة مصروف',
@@ -554,6 +721,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                     setState(() {
                       _selectedCurrency = value;
                     });
+                    _updateDraft();
                   }
                 },
               ),
@@ -576,6 +744,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                     setState(() {
                       _selectedCategory = value;
                     });
+                    _updateDraft();
                   }
                 },
                 validator: (value) {
@@ -694,6 +863,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                         setState(() {
                           _selectedPaymentBrand = value;
                         });
+                        _updateDraft();
                       },
                     ),
                     const SizedBox(height: 12),
@@ -746,6 +916,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                         setState(() {
                           _wantsReceipt = value ?? false;
                         });
+                        _updateDraft();
                       },
                     ),
                     const Text('هل يوجد إيصال؟'),
@@ -1017,7 +1188,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: _handleExit,
                       child: const Text('إلغاء'),
                     ),
                   ),
@@ -1037,7 +1208,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 ],
               ),
               SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-            ],
+              ],
+            ),
           ),
         ),
       ),
