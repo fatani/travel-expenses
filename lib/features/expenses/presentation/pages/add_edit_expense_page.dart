@@ -11,6 +11,7 @@ import '../models/expense_draft.dart';
 import '../providers/expense_draft_provider.dart';
 import '../providers/expenses_providers.dart';
 import '../providers/ocr_suggestion_provider.dart';
+import '../utils/sms_receipt_parser.dart';
 
 class AddEditExpensePage extends ConsumerStatefulWidget {
   final String tripId;
@@ -47,6 +48,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   late TextEditingController _merchantController;
   late TextEditingController _locationController;
   late TextEditingController _paymentLabelController;
+  late TextEditingController _smsInputController;
   late String _selectedCategory;
   late String _selectedCurrency;
   late String _selectedPaymentMethod;
@@ -58,6 +60,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   bool _showAppliedSuggestionMessage = false;
   bool _draftAppliedOnce = false;
   bool _draftUpdatesEnabled = false;
+  String? _smsParseMessage;
 
   final FocusNode _amountFocusNode = FocusNode();
   final FocusNode _currencyFocusNode = FocusNode();
@@ -122,6 +125,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _merchantController = TextEditingController();
       _locationController = TextEditingController();
       _paymentLabelController = TextEditingController();
+      _smsInputController = TextEditingController();
       _selectedCategory = _categories.first;
       _selectedCurrency = widget.tripCurrency;
       _selectedPaymentMethod = _paymentMethods.keys.first;
@@ -153,6 +157,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     _merchantController.dispose();
     _locationController.dispose();
     _paymentLabelController.dispose();
+    _smsInputController.dispose();
     _amountFocusNode.dispose();
     _currencyFocusNode.dispose();
     _categoryFocusNode.dispose();
@@ -580,6 +585,78 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     }
   }
 
+  void _handleParseSms() {
+    final input = _smsInputController.text.trim();
+    if (input.isEmpty) {
+      setState(() {
+        _smsParseMessage = 'الرجاء إدخال نص الرسالة أولاً';
+      });
+      return;
+    }
+
+    final result = parseSmsReceipt(input);
+
+    if (!result.isUseful) {
+      setState(() {
+        _smsParseMessage = 'لم أتمكن من استخراج بيانات مفيدة من النص';
+      });
+      return;
+    }
+
+    // Only fill empty fields
+    if (result.amount != null && _amountController.text.trim().isEmpty) {
+      _amountController.text = result.amount!.toStringAsFixed(2);
+    }
+
+    if (result.currency != null && _selectedCurrency == widget.tripCurrency) {
+      setState(() {
+        _selectedCurrency = result.currency!;
+      });
+    }
+
+    if (result.merchant != null && _merchantController.text.trim().isEmpty) {
+      _merchantController.text = result.merchant!;
+    }
+
+    if (result.dateTime != null) {
+      setState(() {
+        _selectedDate = result.dateTime!;
+      });
+    }
+
+    if (result.paymentType != null) {
+      final type = result.paymentType!;
+      if (_paymentMethods.containsKey(type)) {
+        _setPaymentMethodType(type, persist: false);
+      }
+    }
+
+    if (result.paymentBrand != null) {
+      setState(() {
+        _selectedPaymentBrand = result.paymentBrand;
+      });
+    }
+
+    if (result.paymentLabel != null && _paymentLabelController.text.trim().isEmpty) {
+      _paymentLabelController.text = result.paymentLabel!;
+    }
+
+    _updateDraft();
+
+    // Show success message with confidence
+    final confidencePercent = (result.confidence * 100).toStringAsFixed(0);
+    setState(() {
+      _smsParseMessage = 'تم الاستخراج بنجاح (ثقة: $confidencePercent%)';
+    });
+
+    // Focus on first empty critical field
+    if (_amountController.text.trim().isEmpty) {
+      _amountFocusNode.requestFocus();
+    } else if (_merchantController.text.trim().isEmpty) {
+      _merchantFocusNode.requestFocus();
+    }
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -678,6 +755,71 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 24),
+
+              // SMS Receipt Parser Card (only in add mode)
+              if (!isEditing) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.message, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'استخراج من رسالة SMS',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: _smsInputController,
+                          decoration: const InputDecoration(
+                            hintText: 'الصق نص رسالة البنك هنا...',
+                            border: OutlineInputBorder(),
+                          ),
+                          minLines: 3,
+                          maxLines: 6,
+                          onChanged: (_) {
+                            if (_smsParseMessage != null) {
+                              setState(() {
+                                _smsParseMessage = null;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: _handleParseSms,
+                          icon: const Icon(Icons.auto_fix_high),
+                          label: const Text('استخراج البيانات'),
+                        ),
+                        if (_smsParseMessage != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _smsParseMessage!.contains('بنجاح')
+                                  ? Colors.green.withAlpha(50)
+                                  : Colors.orange.withAlpha(50),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              _smsParseMessage!,
+                              style: Theme.of(context).textTheme.bodySmall,
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Amount field
               TextFormField(

@@ -1,16 +1,140 @@
-# travel_expenses
+# Travel Expenses Tracker
 
-A new Flutter project.
+تطبيق Flutter لتتبع مصاريف السفر مع دعم كامل للغة العربية RTL.
 
-## Getting Started
+## الميزات الرئيسية
 
-This project is a starting point for a Flutter application.
+### 1. إدارة الرحلات
+- إنشاء وتعديل رحلات السفر
+- تحديد عملة أساسية لكل رحلة
+- عرض ملخص المصاريف حسب الفئة
 
-A few resources to get you started if this is your first Flutter project:
+### 2. تسجيل المصاريف الذكي
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+#### **استخراج البيانات من رسائل SMS البنكية** ✨ جديد
+- الصق نص رسالة البنك (SMS/WhatsApp) مباشرة في نموذج المصروف
+- استخراج تلقائي للحقول التالية:
+  - **المبلغ**: يدعم الأرقام العربية (٠-٩) والإنجليزية
+  - **العملة**: SAR, USD, EUR, GBP, وغيرها
+  - **مكان الشراء**: اسم المتجر/الشركة
+  - **التاريخ والوقت**: تنسيقات متعددة (dd/MM/yy, dd-MM-yyyy)
+  - **طريقة الدفع**: بطاقة، محفظة رقمية، نقد
+  - **نوع البطاقة**: Visa, Mastercard, Mada, Apple Pay
+  - **اسم البطاقة**: مثل "فرسان"، "الراجحي"
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**تنسيقات الرسائل المدعومة:**
+- رسائل المشتريات العربية (POS)
+- رسائل الشراء الإلكتروني (Apple Pay)
+- رسائل البنوك الإنجليزية
+
+**مثال:**
+```
+قامت بطاقة الأعمال فرسان
+مشتريات مباشرة من شركة كريم Mastercard x-1234
+مبلغ: 44.99 SAR في 22/12/24 الساعة 19:54
+```
+سيتم استخراج: 44.99 SAR من كريم مع معلومات Mastercard تلقائياً ✓
+
+#### حماية المسودات
+- حفظ تلقائي للبيانات أثناء الكتابة
+- نافذة تأكيد عند محاولة الخروج من نموذج غير محفوظ
+- استعادة المسودة عند العودة للنموذج
+- عزل المسودات حسب الرحلة (لكل رحلة مسودتها الخاصة)
+
+#### اقتراحات OCR للإيصالات (تجريبي)
+- اختيار صورة إيصال من المعرض
+- اقتراحات محددة مسبقاً بناءً على الإيصال المحدد
+- تطبيق الاقتراحات بنقرة واحدة
+
+### 3. إدارة الإيصالات
+- التقاط صور الإيصالات مباشرة
+- تحميل إيصالات من المعرض
+- ربط إيصالات متعددة بكل مصروف
+
+### 4. تصدير البيانات
+- تصدير جميع مصاريف الرحلة إلى ملف CSV
+- تنسيقات تواريخ متعددة
+- فواصل CSV قابلة للتخصيص
+
+## التقنيات المستخدمة
+- **Flutter**: SDK 3.29.2
+- **Riverpod**: إدارة الحالة
+- **Drift**: قاعدة بيانات محلية (SQLite + web support)
+- **Image Picker**: التقاط الصور
+- **CSV**: تصدير البيانات
+
+## التشغيل
+
+```bash
+# تنزيل المكتبات
+flutter pub get
+
+# تشغيل على الويب
+flutter run -d chrome
+
+# تشغيل الاختبارات
+flutter test
+
+# تحليل الكود
+flutter analyze
+```
+
+## الاختبارات
+
+المشروع يحتوي على تغطية شاملة بالاختبارات:
+- اختبارات وحدة لمحلل SMS (10 اختبارات)
+- اختبارات مزودات Riverpod (expense drafts, filters)
+- اختبارات قاعدة البيانات
+- اختبارات خدمات (CSV export, trip summary)
+
+```bash
+flutter test                     # جميع الاختبارات (54 اختبار)
+flutter test test/sms_*          # اختبارات محلل SMS فقط
+flutter test test/expense_draft* # اختبارات المسودات فقط
+```
+
+## البنية المعمارية
+
+```
+lib/
+├── core/               # نماذج ومكونات مشتركة
+│   ├── db/            # إعداد قاعدة البيانات (Drift)
+│   ├── models/        # نماذج البيانات الرئيسية
+│   └── widgets/       # مكونات واجهة مشتركة
+├── features/          # الميزات حسب الوحدات
+│   ├── expenses/      # إدارة المصاريف
+│   │   ├── presentation/
+│   │   │   ├── models/       # ExpenseDraft
+│   │   │   ├── pages/        # AddEditExpensePage
+│   │   │   ├── providers/    # Riverpod providers
+│   │   │   └── utils/        # sms_receipt_parser.dart ✨
+│   │   └── repositories/
+│   ├── receipts/      # إدارة الإيصالات
+│   └── trips/         # إدارة الرحلات
+└── app/               # إعدادات التطبيق، الثيم، التوجيه
+```
+
+## ملاحظات التطوير
+
+### القيود الحالية
+- لا يتم إجراء أي migrations لقاعدة البيانات
+- جميع الحالات في الذاكرة فقط (in-memory)
+- لا توجد مكتبات إضافية للمحلل (pure Dart regex)
+- المحلل يستخدم أنماط regex بسيطة (ليس ML/AI)
+
+### الأنماط المعمارية
+- استخدام `family` providers للعزل حسب السياق (مثل draft per trip)
+- استخدام `StateNotifier` بدون `autoDispose` للحالات الدائمة
+- نماذج immutable مع `copyWith`
+- اختبارات على مستوى provider بدلاً من widget tests للسرعة
+
+## الإصدارات القادمة
+- [ ] دعم OCR حقيقي باستخدام ML
+- [ ] تعلم أنماط SMS تلقائياً
+- [ ] دعم المزيد من البنوك والعملات
+- [ ] مزامنة عبر الأجهزة
+
+## الترخيص
+
+MIT License - مشروع تعليمي
+
