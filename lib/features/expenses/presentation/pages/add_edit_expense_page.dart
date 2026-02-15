@@ -4,9 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/models/expense.dart';
+import '../../../../core/models/receipt.dart';
 import '../../../receipts/presentation/providers/receipts_providers.dart';
 import '../../../receipts/presentation/widgets/receipt_gallery.dart';
 import '../providers/expenses_providers.dart';
+import '../providers/ocr_suggestion_provider.dart';
 
 class AddEditExpensePage extends ConsumerStatefulWidget {
   final String tripId;
@@ -29,8 +31,12 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
   final _formKey = GlobalKey<FormState>();
   final _amountFieldKey = GlobalKey();
+  final _currencyFieldKey = GlobalKey();
   final _categoryFieldKey = GlobalKey();
+  final _dateFieldKey = GlobalKey();
   final _merchantFieldKey = GlobalKey();
+  final _locationFieldKey = GlobalKey();
+  final _noteFieldKey = GlobalKey();
   final _receiptsSectionKey = GlobalKey();
   final ScrollController _scrollController = ScrollController();
 
@@ -46,10 +52,16 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   late DateTime _selectedDate;
   String? _newExpenseId; // Track newly created expense
   bool _wantsReceipt = false;
+  String? _selectedReceiptId;
+  bool _showAppliedSuggestionMessage = false;
 
   final FocusNode _amountFocusNode = FocusNode();
+  final FocusNode _currencyFocusNode = FocusNode();
   final FocusNode _categoryFocusNode = FocusNode();
+  final FocusNode _dateFocusNode = FocusNode();
   final FocusNode _merchantFocusNode = FocusNode();
+  final FocusNode _locationFocusNode = FocusNode();
+  final FocusNode _noteFocusNode = FocusNode();
 
   final List<String> _categories = [
     'الطعام',
@@ -128,8 +140,12 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     _locationController.dispose();
     _paymentLabelController.dispose();
     _amountFocusNode.dispose();
+    _currencyFocusNode.dispose();
     _categoryFocusNode.dispose();
+    _dateFocusNode.dispose();
     _merchantFocusNode.dispose();
+    _locationFocusNode.dispose();
+    _noteFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
   }
@@ -217,6 +233,143 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       await _focusAndScroll(_merchantFieldKey, _merchantFocusNode);
       return;
     }
+  }
+
+  int _buildReceiptSeed(Receipt receipt) {
+    final seedSource = [
+      receipt.id,
+      receipt.createdAt.millisecondsSinceEpoch.toString(),
+      receipt.localPath ?? '',
+      receipt.data?.length.toString() ?? '0',
+    ].join('|');
+
+    var hash = 0;
+    for (final codeUnit in seedSource.codeUnits) {
+      hash = (hash * 31 + codeUnit) & 0x7fffffff;
+    }
+
+    return hash % 100000;
+  }
+
+  Future<void> _focusFirstSuggestedField({
+    required bool amount,
+    required bool merchant,
+    required bool date,
+    required bool currency,
+    required bool location,
+    required bool notes,
+  }) async {
+    if (amount) {
+      await _focusAndScroll(_amountFieldKey, _amountFocusNode);
+      return;
+    }
+    if (merchant) {
+      await _focusAndScroll(_merchantFieldKey, _merchantFocusNode);
+      return;
+    }
+    if (date) {
+      await _focusAndScroll(_dateFieldKey, _dateFocusNode);
+      return;
+    }
+    if (currency) {
+      await _focusAndScroll(_currencyFieldKey, _currencyFocusNode);
+      return;
+    }
+    if (location) {
+      await _focusAndScroll(_locationFieldKey, _locationFocusNode);
+      return;
+    }
+    if (notes) {
+      await _focusAndScroll(_noteFieldKey, _noteFocusNode);
+    }
+  }
+
+  void _onReceiptSelected(String draftKey, Receipt receipt) {
+    if (_selectedReceiptId == receipt.id) {
+      return;
+    }
+
+    setState(() {
+      _selectedReceiptId = receipt.id;
+      _showAppliedSuggestionMessage = false;
+    });
+    ref.read(ocrSuggestionProvider(draftKey).notifier).reset();
+  }
+
+  Future<void> _generateOcrSuggestion({
+    required String draftKey,
+    required Receipt selectedReceipt,
+    required int receiptsCount,
+  }) async {
+    final seed = _buildReceiptSeed(selectedReceipt);
+    final amountText = _amountController.text.trim();
+    final amount = double.tryParse(amountText);
+
+    await ref.read(ocrSuggestionProvider(draftKey).notifier).generate(
+          tripId: widget.tripId,
+          draftKey: draftKey,
+          receiptsCount: receiptsCount,
+          seed: seed,
+          currentCurrencyCode: _selectedCurrency,
+          currentMerchant: _merchantController.text.trim().isEmpty
+              ? null
+              : _merchantController.text.trim(),
+          currentLocationText: _locationController.text.trim().isEmpty
+              ? null
+              : _locationController.text.trim(),
+          currentDate: _selectedDate,
+          currentAmount: amount == null || amount <= 0 ? null : amount,
+        );
+  }
+
+  Future<void> _applySuggestions(OcrSuggestion suggestion) async {
+    var amountChanged = false;
+    var merchantChanged = false;
+    var dateChanged = false;
+    var currencyChanged = false;
+    var locationChanged = false;
+    var notesChanged = false;
+
+    setState(() {
+      if (suggestion.amount != null && _amountController.text.trim().isEmpty) {
+        _amountController.text = suggestion.amount!.toString();
+        amountChanged = true;
+      }
+      if (suggestion.merchant != null &&
+          _merchantController.text.trim().isEmpty) {
+        _merchantController.text = suggestion.merchant!;
+        merchantChanged = true;
+      }
+      if (suggestion.date != null) {
+        _selectedDate = suggestion.date!;
+        dateChanged = true;
+      }
+      if (suggestion.currencyCode != null) {
+        _selectedCurrency = suggestion.currencyCode!;
+        currencyChanged = true;
+      }
+      if (suggestion.locationText != null &&
+          _locationController.text.trim().isEmpty) {
+        _locationController.text = suggestion.locationText!;
+        locationChanged = true;
+      }
+      if (suggestion.notes != null && _noteController.text.trim().isEmpty) {
+        _noteController.text = suggestion.notes!;
+        notesChanged = true;
+      }
+      _showAppliedSuggestionMessage =
+          amountChanged || merchantChanged || dateChanged || currencyChanged ||
+              locationChanged || notesChanged;
+    });
+
+    await _focusFirstSuggestedField(
+      amount: amountChanged,
+      merchant: merchantChanged,
+      date: dateChanged,
+      currency: currencyChanged,
+      location: locationChanged,
+      notes: notesChanged,
+    );
   }
 
   Future<void> _scrollToReceipts() async {
@@ -334,6 +487,13 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.expense != null;
+    final shouldShowReceipts = isEditing || (_wantsReceipt && _newExpenseId != null);
+    final expenseId = _newExpenseId ?? (isEditing ? widget.expense!.id : '');
+    final draftKey = expenseId.isEmpty ? 'draft' : expenseId;
+    final receiptsAsync = shouldShowReceipts && expenseId.isNotEmpty
+      ? ref.watch(watchReceiptsByExpenseProvider(expenseId))
+      : const AsyncValue.data(<Receipt>[]);
+    final ocrSuggestionAsync = ref.watch(ocrSuggestionProvider(draftKey));
 
     return SingleChildScrollView(
       controller: _scrollController,
@@ -379,6 +539,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
               // Currency field
               DropdownButtonFormField<String>(
+                key: _currencyFieldKey,
+                focusNode: _currencyFocusNode,
                 value: _selectedCurrency,
                 decoration: const InputDecoration(
                   labelText: 'العملة',
@@ -428,13 +590,17 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               // Date field
               GestureDetector(
                 onTap: _pickDate,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'التاريخ',
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Text(
-                    '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                child: Focus(
+                  key: _dateFieldKey,
+                  focusNode: _dateFocusNode,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'التاريخ',
+                      prefixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                    ),
                   ),
                 ),
               ),
@@ -546,7 +712,9 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
               // Location text field
               TextFormField(
+                key: _locationFieldKey,
                 controller: _locationController,
+                focusNode: _locationFocusNode,
                 decoration: const InputDecoration(
                   labelText: 'موقع الشراء (اختياري)',
                   hintText: 'مثال: مطار إسطنبول، Taksim، Dubai Mall',
@@ -557,7 +725,9 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
               // Note field
               TextFormField(
+                key: _noteFieldKey,
                 controller: _noteController,
+                focusNode: _noteFocusNode,
                 decoration: const InputDecoration(
                   labelText: 'ملاحظات (اختياري)',
                   hintText: 'أضف ملاحظات عن هذا المصروف',
@@ -592,7 +762,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               ],
 
               // Receipts section
-              if (isEditing || (_wantsReceipt && _newExpenseId != null)) ...[
+              if (shouldShowReceipts) ...[
                 Text(
                   'الإيصالات',
                   key: _receiptsSectionKey,
@@ -624,12 +794,54 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 ),
                 const SizedBox(height: 12),
                 ReceiptGallery(
-                  expenseId: _newExpenseId ?? (isEditing ? widget.expense!.id : ''),
+                  expenseId: expenseId,
                   isEditing: true,
+                  selectedReceiptId: _selectedReceiptId,
+                  onReceiptSelected: (receipt) => _onReceiptSelected(draftKey, receipt),
+                ),
+                const SizedBox(height: 8),
+                receiptsAsync.when(
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                  data: (receipts) {
+                    final selectedIndex = receipts.indexWhere(
+                      (receipt) => receipt.id == _selectedReceiptId,
+                    );
+                    if (selectedIndex == -1 && _selectedReceiptId != null) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) {
+                          return;
+                        }
+                        setState(() {
+                          _selectedReceiptId = null;
+                          _showAppliedSuggestionMessage = false;
+                        });
+                        ref.read(ocrSuggestionProvider(draftKey).notifier).reset();
+                      });
+                    }
+                    return Row(
+                      children: [
+                        const Icon(Icons.receipt_long, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'الإيصال النشط: ',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        Text(
+                          selectedIndex == -1
+                              ? 'غير محدد'
+                              : 'رقم ${selectedIndex + 1}',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
 
-                // OCR Placeholder Section
+                // OCR Mock Section
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -646,7 +858,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                'استخراج البيانات من الإيصال (قريبًا)',
+                                'استخراج البيانات من الإيصال (تجريبي)',
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ),
@@ -654,24 +866,143 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'سيساعدك لاحقًا على تعبئة المبلغ، التاريخ، العملة، ومكان الشراء تلقائيًا.',
+                          'سيتم اقتراح المبلغ، التاريخ، العملة، ومكان الشراء بناءً على الإيصال المختار.',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: null,
-                            icon: const Icon(Icons.document_scanner_outlined),
-                            label: const Text('استخراج البيانات (قريبًا)'),
+                        receiptsAsync.when(
+                          loading: () => const SizedBox(
+                            height: 48,
+                            child: Center(child: CircularProgressIndicator()),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'هذه الميزة ستعمل كاقتراحات، وستراجعها قبل الحفظ.',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                          error: (error, _) => Text(
+                            'تعذر تحميل الإيصالات: $error',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
+                          data: (receipts) {
+                            final hasReceipts = receipts.isNotEmpty;
+                            Receipt? selectedReceipt;
+                            if (_selectedReceiptId != null) {
+                              for (final receipt in receipts) {
+                                if (receipt.id == _selectedReceiptId) {
+                                  selectedReceipt = receipt;
+                                  break;
+                                }
+                              }
+                            }
+                            final isGenerateDisabled =
+                                !hasReceipts || _selectedReceiptId == null;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (hasReceipts && _selectedReceiptId == null) ...[
+                                  Text(
+                                    'اختر إيصالاً أولاً ثم اضغط استخراج.',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Colors.orange[700],
+                                        ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                ],
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    onPressed: isGenerateDisabled || selectedReceipt == null
+                                        ? null
+                                        : () async {
+                                            setState(() {
+                                              _showAppliedSuggestionMessage = false;
+                                            });
+                                            await _generateOcrSuggestion(
+                                              draftKey: draftKey,
+                                              selectedReceipt: selectedReceipt!,
+                                              receiptsCount: receipts.length,
+                                            );
+                                          },
+                                    icon: const Icon(Icons.document_scanner_outlined),
+                                    label: const Text('استخراج البيانات (تجريبي)'),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                ocrSuggestionAsync.when(
+                                  loading: () => const LinearProgressIndicator(),
+                                  error: (error, _) => Text(
+                                    error.toString(),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Colors.red[700],
+                                        ),
+                                  ),
+                                  data: (suggestion) {
+                                    if (suggestion == null) {
+                                      return Text(
+                                        'هذه الميزة ستعمل كاقتراحات، وستراجعها قبل الحفظ.',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(color: Colors.grey[600]),
+                                      );
+                                    }
+
+                                    final hasSuggestions = suggestion.hasAnyValue;
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        if (!hasSuggestions)
+                                          Text(
+                                            'لا توجد اقتراحات جديدة لأن الحقول ممتلئة.',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(color: Colors.grey[600]),
+                                          )
+                                        else ...[
+                                          if (suggestion.amount != null)
+                                            Text('المبلغ المقترح: ${suggestion.amount}'),
+                                          if (suggestion.merchant != null)
+                                            Text('مكان الشراء المقترح: ${suggestion.merchant}'),
+                                          if (suggestion.date != null)
+                                            Text(
+                                              'التاريخ المقترح: '
+                                              '${suggestion.date!.year}-'
+                                              '${suggestion.date!.month.toString().padLeft(2, '0')}-'
+                                              '${suggestion.date!.day.toString().padLeft(2, '0')}',
+                                            ),
+                                          if (suggestion.currencyCode != null)
+                                            Text('العملة المقترحة: ${suggestion.currencyCode}'),
+                                          if (suggestion.locationText != null)
+                                            Text('الموقع المقترح: ${suggestion.locationText}'),
+                                          if (suggestion.notes != null)
+                                            Text('الملاحظات المقترحة: ${suggestion.notes}'),
+                                          const SizedBox(height: 12),
+                                          SizedBox(
+                                            width: double.infinity,
+                                            child: OutlinedButton.icon(
+                                              onPressed: hasSuggestions
+                                                  ? () => _applySuggestions(suggestion)
+                                                  : null,
+                                              icon: const Icon(Icons.check_circle_outline),
+                                              label: const Text('تطبيق الاقتراحات'),
+                                            ),
+                                          ),
+                                        ],
+                                        if (_showAppliedSuggestionMessage) ...[
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            'تم تطبيق اقتراحات الإيصال المختار. راجعها قبل الحفظ.',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(color: Colors.green[700]),
+                                          ),
+                                        ],
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
                     ),

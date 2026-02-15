@@ -10,11 +10,15 @@ import '../providers/receipts_providers.dart';
 class ReceiptGallery extends ConsumerWidget {
   final String expenseId;
   final bool isEditing;
+  final String? selectedReceiptId;
+  final ValueChanged<Receipt>? onReceiptSelected;
 
   const ReceiptGallery({
     super.key,
     required this.expenseId,
     required this.isEditing,
+    this.selectedReceiptId,
+    this.onReceiptSelected,
   });
 
   @override
@@ -66,6 +70,8 @@ class ReceiptGallery extends ConsumerWidget {
               return _ReceiptThumbnail(
                 receipt: receipt,
                 expenseId: expenseId,
+                isSelected: receipt.id == selectedReceiptId,
+                onSelect: onReceiptSelected,
               );
             },
           ),
@@ -78,10 +84,14 @@ class ReceiptGallery extends ConsumerWidget {
 class _ReceiptThumbnail extends ConsumerWidget {
   final Receipt receipt;
   final String expenseId;
+  final bool isSelected;
+  final ValueChanged<Receipt>? onSelect;
 
   const _ReceiptThumbnail({
     required this.receipt,
     required this.expenseId,
+    required this.isSelected,
+    this.onSelect,
   });
 
   @override
@@ -91,10 +101,25 @@ class _ReceiptThumbnail extends ConsumerWidget {
       child: Stack(
         children: [
           GestureDetector(
-            onTap: () => _showFullImage(context),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: _buildImage(),
+            onTap: () {
+              if (onSelect != null) {
+                onSelect!(receipt);
+              } else {
+                _showFullImage(context);
+              }
+            },
+            onLongPress: () => _showFullImage(context),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: isSelected
+                    ? Border.all(color: Theme.of(context).colorScheme.primary, width: 2)
+                    : Border.all(color: Colors.transparent, width: 2),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _buildImage(),
+              ),
             ),
           ),
           Positioned(
