@@ -98,10 +98,22 @@ String _normalize(String input) {
 
 double? _parseAmountString(String value) {
   var cleaned = value.trim();
+  
+  // Handle both comma and dot
   if (cleaned.contains(',') && cleaned.contains('.')) {
+    // Both present: comma is thousands separator, dot is decimal
     cleaned = cleaned.replaceAll(',', '');
   } else if (cleaned.contains(',') && !cleaned.contains('.')) {
-    cleaned = cleaned.replaceAll(',', '.');
+    // Only comma: check if it's thousands or decimal
+    final parts = cleaned.split(',');
+    if (parts.length == 2 && parts[1].length == 3) {
+      // Last part is 3 digits → thousands separator
+      // Check if there are more commas (e.g., 1,000,000)
+      cleaned = cleaned.replaceAll(',', '');
+    } else {
+      // Last part is not 3 digits → decimal separator
+      cleaned = cleaned.replaceAll(',', '.');
+    }
   }
 
   final parsed = double.tryParse(cleaned);
@@ -164,35 +176,80 @@ String? _extractCurrency(String text) {
 String? _extractMerchant(String text) {
   // Arabic patterns: "من", "لدى:", "لدى"
   final arabicPatterns = [
-    RegExp(r'من\s+([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ|في|مبلغ|Amount|Balance|رصيد|On|\(|x-|\d{1,2}/\d{1,2}/\d|$))', caseSensitive: false),
-    RegExp(r'لدى\s*:\s*([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ|في|مبلغ|Amount|Balance|رصيد|On|\(|$))', caseSensitive: false),
-    RegExp(r'لدى\s+([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ|في|مبلغ|Amount|Balance|رصيد|On|\(|$))', caseSensitive: false),
+    RegExp(r'من\s+([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ?|في|بمبلغ|مبلغ|Amount|Balance|رصيد|On|for|;|\(|x-|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|$)', caseSensitive: false),
+    RegExp(r'لدى\s*:\s*([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ?|في|بمبلغ|مبلغ|Amount|Balance|رصيد|On|for|;|\(|SAR|USD|EUR|GBP)|$)', caseSensitive: false),
+    RegExp(r'لدى\s+([^\n]+?)(?:\s+(?:Mastercard|Visa|مدى|بـ?|في|بمبلغ|مبلغ|Amount|Balance|رصيد|On|for|;|\(|SAR|USD|EUR|GBP)|$)', caseSensitive: false),
   ];
 
   for (final pattern in arabicPatterns) {
     final match = pattern.firstMatch(text);
     if (match != null && match.group(1) != null) {
-      return match.group(1)!.trim();
+      final merchant = _cleanMerchantName(match.group(1)!);
+      if (merchant.isNotEmpty) return merchant;
     }
   }
 
-  // English patterns: "At:", "From:"
+  // English patterns: "used at", "At:", "From:", "from"
   final englishPatterns = [
-    RegExp(r'At\s*:\s*([^\n]+?)(?:\s+(?:Amount|Balance|On|\(|\d{1,2}/\d{1,2}/\d)|\n|$)', caseSensitive: false),
-    RegExp(r'From\s*:\s*([^\n]+?)(?:\s+(?:Amount|Balance|On|\(|\d{1,2}/\d{1,2}/\d)|\n|$)', caseSensitive: false),
-    RegExp(r'\bat\s+([^\n]+?)(?:\s+(?:for|amount|balance|on|\(|\d{1,2}/\d{1,2}/\d)|\n|$)', caseSensitive: false),
-    RegExp(r'\bvia\s+([^\n]+?)(?:\s+(?:amount|balance|on|\(|\d{1,2}/\d{1,2}/\d)|\n|$)', caseSensitive: false),
-    RegExp(r'\bto\s+([^\n]+?)(?:\s+(?:on|amount|balance|\(|\d{1,2}/\d{1,2}/\d)|\n|$)', caseSensitive: false),
+    RegExp(r'used\s+at\s+([^\n]+?)(?:\s+(?:for|on|amount|balance|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|$)', caseSensitive: false),
+    RegExp(r'At\s*:\s*([^\n]+?)(?:\s+(?:Amount|Balance|On|for|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'From\s*:\s*([^\n]+?)(?:\s+(?:Amount|Balance|On|for|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'\bfrom\s+([^\n]+?)(?:\s*[;,]|\s+(?:Amount|Balance|On|for|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'\bAt\s+([^\n]+?)(?:\s+(?:Amount|Balance|On|for|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'\bat\s+([^\n]+?)(?:\s+(?:for|amount|balance|on|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'\bvia\s+([^\n]+?)(?:\s+(?:amount|balance|on|for|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
+    RegExp(r'\bto\s+([^\n]+?)(?:\s+(?:on|amount|balance|for|;|\(|\d{1,2}/\d{1,2}/\d|SAR|USD|EUR|GBP)|\n|$)', caseSensitive: false),
   ];
 
   for (final pattern in englishPatterns) {
     final match = pattern.firstMatch(text);
     if (match != null && match.group(1) != null) {
-      return match.group(1)!.trim();
+      final merchant = _cleanMerchantName(match.group(1)!);
+      if (merchant.isNotEmpty) return merchant;
+    }
+  }
+
+  // Fallback: look for domain names or known merchants
+  final domainPattern = RegExp(r'\b([A-Z][A-Z0-9]*(?:\.[A-Z]{2,})+)\b', caseSensitive: false);
+  final domainMatch = domainPattern.firstMatch(text);
+  if (domainMatch != null && domainMatch.group(1) != null) {
+    final domain = domainMatch.group(1)!;
+    // Check if it's a valid domain (contains at least one dot)
+    if (domain.contains('.')) {
+      return domain.toUpperCase();
+    }
+  }
+
+  // Check for "Bill Payment"
+  if (text.toLowerCase().contains('bill payment')) {
+    return 'Bill Payment';
+  }
+
+  // Look for standalone merchant names (TABBY, AMAZON, etc.)
+  final merchantKeywords = ['TABBY', 'AMAZON', 'APPLE', 'GOOGLE', 'UBER', 'CAREEM', 'NOON', 'JARIR', 'EXTRA'];
+  for (final keyword in merchantKeywords) {
+    if (text.toUpperCase().contains(keyword)) {
+      return keyword;
     }
   }
 
   return null;
+}
+
+String _cleanMerchantName(String raw) {
+  var cleaned = raw.trim();
+  
+  // Remove trailing punctuation and symbols
+  cleaned = cleaned.replaceAll(RegExp(r'[;،،,]+$'), '');
+  
+  // Remove leading/trailing special characters
+  cleaned = cleaned.replaceAll(RegExp(r'^[\s:،,;]+'), '');
+  cleaned = cleaned.replaceAll(RegExp(r'[\s:،,;]+$'), '');
+  
+  // Collapse multiple spaces
+  cleaned = cleaned.replaceAll(RegExp(r'\s+'), ' ');
+  
+  return cleaned.trim();
 }
 
 DateTime? _extractDateTime(String text) {
@@ -274,30 +331,22 @@ DateTime? parseBestEffortDate(String text, DateTime fallback) {
   }
 
   if (normalizedToken.contains('mastercard') || normalizedToken.contains('master card')) {
-    if (type == null) {
-      type = 'card';
-    }
+    type ??= 'card';
     brand = 'mastercard';
   }
 
   if (normalizedToken.contains('visa') && brand != 'mastercard') {
-    if (type == null) {
-      type = 'card';
-    }
+    type ??= 'card';
     brand = 'visa';
   }
 
   if (normalizedToken.contains('amex') || normalizedToken.contains('american express')) {
-    if (type == null) {
-      type = 'card';
-    }
+    type ??= 'card';
     brand = 'amex';
   }
 
   if (lowerText.contains('مدى') || normalizedToken.contains('mada')) {
-    if (type == null) {
-      type = 'card';
-    }
+    type ??= 'card';
     brand = 'mada';
   }
 
