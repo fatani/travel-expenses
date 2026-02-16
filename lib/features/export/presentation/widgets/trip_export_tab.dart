@@ -2,7 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/app_loading.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../expenses/presentation/providers/expenses_providers.dart';
 import '../../providers/trip_csv_export_provider.dart';
 import '../utils/csv_downloader.dart';
@@ -73,15 +75,23 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
     final expensesAsync = ref.watch(watchExpensesByTripProvider(widget.tripId));
 
     return expensesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => ErrorState(
-        title: 'حدث خطأ أثناء تحميل البيانات.',
-        actionLabel: 'إعادة المحاولة',
-        onAction: () => ref.invalidate(watchExpensesByTripProvider(widget.tripId)),
+      loading: () => const AppLoading(),
+      error: (error, stackTrace) => AppErrorState(
+        title: 'تعذر تحميل المصاريف',
+        message: 'حدث خطأ أثناء تحميل المصاريف.',
+        onRetry: () => ref.invalidate(watchExpensesByTripProvider(widget.tripId)),
       ),
       data: (expenses) {
         final isEmpty = expenses.isEmpty;
         final statusMessage = isEmpty ? 'لا توجد مصاريف لتصديرها.' : _message;
+
+        if (isEmpty) {
+          return AppEmptyState(
+            icon: Icons.download,
+            title: 'لا توجد مصاريف لتصديرها',
+            message: 'أضف مصاريف لتتمكن من تصديرها.',
+          );
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
@@ -123,16 +133,19 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
               // Export button
               ElevatedButton(
                 onPressed: _isLoading || isEmpty ? null : _handleExport,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text('تصدير CSV'),
+                child: const Text('تصدير CSV'),
               ),
+              if (_isLoading) ...[
+                const SizedBox(height: 12.0),
+                Text(
+                  'جارٍ تجهيز ملف CSV…',
+                  textAlign: TextAlign.center,
+                  textDirection: TextDirection.rtl,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                ),
+              ],
               const SizedBox(height: 16.0),
 
               // Status message

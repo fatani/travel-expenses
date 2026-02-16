@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/empty_state.dart';
-import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/app_loading.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../providers/trips_providers.dart';
 
 class TripListPage extends ConsumerWidget {
@@ -48,20 +49,22 @@ class TripListPage extends ConsumerWidget {
         title: const Text('الرحلات'),
       ),
       body: tripsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => ErrorState(
-          title: 'حدث خطأ أثناء تحميل البيانات.',
-          actionLabel: 'إعادة المحاولة',
-          onAction: () => ref.invalidate(tripsStreamProvider),
+        loading: () => const AppLoading(),
+        error: (error, stackTrace) => AppErrorState(
+          title: 'تعذر تحميل الرحلات',
+          message: 'حدث خطأ أثناء تحميل قائمة الرحلات.',
+          onRetry: () => ref.invalidate(tripsStreamProvider),
         ),
         data: (trips) {
           if (trips.isEmpty) {
-            return EmptyState(
+            return AppEmptyState(
               icon: Icons.card_travel,
               title: 'لا توجد رحلات بعد',
-              subtitle: 'ابدأ بإضافة رحلة جديدة لتتبع المصاريف.',
-              actionLabel: 'إضافة رحلة',
-              onAction: () => context.push('/trips/new'),
+              message: 'ابدأ بإنشاء رحلتك الأولى لتتبع مصاريف السفر.',
+              action: ElevatedButton(
+                onPressed: () => context.push('/trips/new'),
+                child: const Text('إضافة رحلة'),
+              ),
             );
           }
 

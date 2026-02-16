@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/trip.dart';
 import '../../../../core/models/expense.dart';
-import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/app_loading.dart';
+import '../../../../core/widgets/app_error_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
 import '../../../expenses/presentation/models/trip_summary.dart';
 import '../../../expenses/presentation/providers/expense_filters_provider.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
@@ -42,13 +44,13 @@ class TripDetailsPage extends ConsumerWidget {
         ),
       ),
       body: tripAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const AppLoading(),
         error: (error, stackTrace) {
           debugPrint('Error loading trip: $error');
-          return ErrorState(
+          return AppErrorState(
             title: 'تعذر تحميل بيانات الرحلة',
-            actionLabel: 'إعادة المحاولة',
-            onAction: () => ref.invalidate(tripByIdProvider(tripId)),
+            message: 'حدث خطأ أثناء تحميل تفاصيل الرحلة.',
+            onRetry: () => ref.invalidate(tripByIdProvider(tripId)),
           );
         },
         data: (trip) {
@@ -168,40 +170,18 @@ class _SummaryTabContent extends ConsumerWidget {
     final expensesAsync = ref.watch(watchExpensesByTripProvider(tripId));
 
     return summaryAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => ErrorState(
-        title: 'حدث خطأ أثناء تحميل البيانات.',
-        actionLabel: 'إعادة المحاولة',
-        onAction: () => ref.invalidate(tripSummaryProvider(tripId)),
+      loading: () => const AppLoading(),
+      error: (error, stackTrace) => AppErrorState(
+        title: 'تعذر تحميل الملخص',
+        message: 'حدث خطأ أثناء تحميل الملخص.',
+        onRetry: () => ref.invalidate(tripSummaryProvider(tripId)),
       ),
       data: (summary) {
         if (summary.totalByCurrency.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'لا يوجد ملخص بعد',
-                        style: Theme.of(context).textTheme.titleMedium,
-                        textDirection: TextDirection.rtl,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'أضف مصاريف لعرض الإجمالي والتوزيعات.',
-                        style: Theme.of(context).textTheme.bodySmall,
-                        textDirection: TextDirection.rtl,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          return AppEmptyState(
+            icon: Icons.pie_chart_outline,
+            title: 'لا يوجد ملخص بعد',
+            message: 'أضف مصاريف لعرض الإجمالي والتوزيعات.',
           );
         }
 
