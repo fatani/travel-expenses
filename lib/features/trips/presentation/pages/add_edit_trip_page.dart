@@ -98,9 +98,10 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
         Navigator.pop(context);
       }
     } catch (e) {
+      debugPrint('Error saving trip: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('خطأ: $e')),
+          const SnackBar(content: Text('حدث خطأ أثناء حفظ الرحلة، يرجى المحاولة مرة أخرى')),
         );
       }
     } finally {
@@ -199,6 +200,7 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.calendar_today),
+                    tooltip: 'اختيار تاريخ البداية',
                     onPressed: () => _selectDate(context, true),
                   ),
                 ],
@@ -218,6 +220,7 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.calendar_today),
+                    tooltip: 'اختيار تاريخ الانتهاء',
                     onPressed: () => _selectDate(context, false),
                   ),
                 ],

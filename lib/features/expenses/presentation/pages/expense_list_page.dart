@@ -120,6 +120,7 @@ class ExpenseListPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAddExpenseSheet(context, ref),
+        tooltip: 'إضافة مصروف جديد',
         child: const Icon(Icons.add),
       ),
     );

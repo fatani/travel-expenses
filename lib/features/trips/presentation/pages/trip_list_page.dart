@@ -100,6 +100,7 @@ class TripListPage extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/trips/new'),
+        tooltip: 'إضافة رحلة جديدة',
         child: const Icon(Icons.add),
       ),
     );

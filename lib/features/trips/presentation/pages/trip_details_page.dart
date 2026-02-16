@@ -26,6 +26,7 @@ class TripDetailsPage extends ConsumerWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'الرجوع',
           onPressed: () {
             if (Navigator.of(context).canPop()) {
               Navigator.of(context).pop();
@@ -42,7 +43,14 @@ class TripDetailsPage extends ConsumerWidget {
       ),
       body: tripAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('خطأ: $error')),
+        error: (error, stackTrace) {
+          debugPrint('Error loading trip: $error');
+          return ErrorState(
+            title: 'تعذر تحميل بيانات الرحلة',
+            actionLabel: 'إعادة المحاولة',
+            onAction: () => ref.invalidate(tripByIdProvider(tripId)),
+          );
+        },
         data: (trip) {
           if (trip == null) {
             return const Center(child: Text('لم يتم العثور على الرحلة'));

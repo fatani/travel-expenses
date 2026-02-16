@@ -46,10 +46,13 @@ class ReceiptGallery extends ConsumerWidget {
         height: 100,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (error, st) => SizedBox(
-        height: 80,
-        child: Center(child: Text('خطأ: $error')),
-      ),
+      error: (error, st) {
+        debugPrint('Error loading receipts: $error');
+        return const SizedBox(
+          height: 80,
+          child: Center(child: Text('تعذر تحميل الإيصالات')),
+        );
+      },
       data: (receipts) {
         if (receipts.isEmpty) {
           return const SizedBox(
@@ -240,10 +243,11 @@ class _ReceiptThumbnail extends ConsumerWidget {
                     );
                   }
                 } catch (e) {
+                  debugPrint('Error deleting receipt: $e');
                   if (context.mounted) {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('خطأ: $e')),
+                      const SnackBar(content: Text('حدث خطأ أثناء حذف الإيصال')),
                     );
                   }
                 }
