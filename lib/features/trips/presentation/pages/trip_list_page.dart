@@ -50,11 +50,15 @@ class TripListPage extends ConsumerWidget {
       ),
       body: tripsAsync.when(
         loading: () => const AppLoading(),
-        error: (error, stackTrace) => AppErrorState(
-          title: 'تعذر تحميل الرحلات',
-          message: 'حدث خطأ أثناء تحميل قائمة الرحلات.',
-          onRetry: () => ref.invalidate(tripsStreamProvider),
-        ),
+        error: (error, stackTrace) {
+          debugPrint('[ERR][trips][trip_list]: $error');
+          debugPrint('$stackTrace');
+          return AppErrorState(
+            title: 'تعذر تحميل الرحلات',
+            message: 'حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى.',
+            onRetry: () => ref.invalidate(tripsStreamProvider),
+          );
+        },
         data: (trips) {
           if (trips.isEmpty) {
             return AppEmptyState(

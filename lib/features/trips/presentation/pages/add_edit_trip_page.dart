@@ -98,10 +98,10 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
         Navigator.pop(context);
       }
     } catch (e) {
-      debugPrint('Error saving trip: $e');
+      debugPrint('[ERR][trips][add_edit]: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ أثناء حفظ الرحلة، يرجى المحاولة مرة أخرى')),
+          const SnackBar(content: Text('تعذر إكمال العملية. تحقق من البيانات وحاول مرة أخرى.')),
         );
       }
     } finally {

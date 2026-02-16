@@ -46,10 +46,11 @@ class TripDetailsPage extends ConsumerWidget {
       body: tripAsync.when(
         loading: () => const AppLoading(),
         error: (error, stackTrace) {
-          debugPrint('Error loading trip: $error');
+          debugPrint('[ERR][trips][trip_details]: $error');
+          debugPrint('$stackTrace');
           return AppErrorState(
             title: 'تعذر تحميل بيانات الرحلة',
-            message: 'حدث خطأ أثناء تحميل تفاصيل الرحلة.',
+            message: 'حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى.',
             onRetry: () => ref.invalidate(tripByIdProvider(tripId)),
           );
         },
@@ -171,11 +172,15 @@ class _SummaryTabContent extends ConsumerWidget {
 
     return summaryAsync.when(
       loading: () => const AppLoading(),
-      error: (error, stackTrace) => AppErrorState(
-        title: 'تعذر تحميل الملخص',
-        message: 'حدث خطأ أثناء تحميل الملخص.',
-        onRetry: () => ref.invalidate(tripSummaryProvider(tripId)),
-      ),
+      error: (error, stackTrace) {
+        debugPrint('[ERR][expenses][summary]: $error');
+        debugPrint('$stackTrace');
+        return AppErrorState(
+          title: 'تعذر تحميل الملخص',
+          message: 'حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى.',
+          onRetry: () => ref.invalidate(tripSummaryProvider(tripId)),
+        );
+      },
       data: (summary) {
         if (summary.totalByCurrency.isEmpty) {
           return AppEmptyState(

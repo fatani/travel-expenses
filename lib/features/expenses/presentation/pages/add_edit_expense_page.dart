@@ -607,6 +607,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
         }
       }
     } catch (e) {
+      debugPrint('[ERR][expenses][add_edit_receipt]: $e');
       // No snackbar per UX requirements.
     }
   }

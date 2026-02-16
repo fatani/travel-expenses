@@ -60,7 +60,7 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
         });
       }
     } catch (e) {
-      debugPrint('Export error: $e');
+      debugPrint('[ERR][export][csv_export]: $e');
       if (mounted) {
         setState(() {
           _message = 'تعذر إنشاء الملف';
@@ -76,11 +76,15 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
 
     return expensesAsync.when(
       loading: () => const AppLoading(),
-      error: (error, stackTrace) => AppErrorState(
-        title: 'تعذر تحميل المصاريف',
-        message: 'حدث خطأ أثناء تحميل المصاريف.',
-        onRetry: () => ref.invalidate(watchExpensesByTripProvider(widget.tripId)),
-      ),
+      error: (error, stackTrace) {
+        debugPrint('[ERR][export][expenses_list]: $error');
+        debugPrint('$stackTrace');
+        return AppErrorState(
+          title: 'تعذر تحميل المصاريف',
+          message: 'حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى.',
+          onRetry: () => ref.invalidate(watchExpensesByTripProvider(widget.tripId)),
+        );
+      },
       data: (expenses) {
         final isEmpty = expenses.isEmpty;
         final statusMessage = isEmpty ? 'لا توجد مصاريف لتصديرها.' : _message;
