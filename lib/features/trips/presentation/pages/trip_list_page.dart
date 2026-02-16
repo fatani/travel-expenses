@@ -77,7 +77,11 @@ class TripListPage extends ConsumerWidget {
             itemBuilder: (context, index) {
               final trip = trips[index];
               return ListTile(
-                title: Text(trip.name),
+                title: Text(
+                  trip.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(trip.defaultCurrency),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -87,15 +91,23 @@ class TripListPage extends ConsumerWidget {
                           ? '${trip.startDate?.day}/${trip.startDate?.month}'
                           : '',
                     ),
-                    IconButton(
-                      tooltip: 'تعديل',
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => context.push('/trips/${trip.id}/edit'),
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'تعديل',
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => context.push('/trips/${trip.id}/edit'),
+                      ),
                     ),
-                    IconButton(
-                      tooltip: 'حذف',
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _confirmDelete(context, ref, trip.id),
+                    SizedBox(
+                      width: 44,
+                      height: 44,
+                      child: IconButton(
+                        tooltip: 'حذف',
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => _confirmDelete(context, ref, trip.id),
+                      ),
                     ),
                   ],
                 ),

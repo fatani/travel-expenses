@@ -148,6 +148,15 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
 
     _bindDraftListeners();
     _draftUpdatesEnabled = true;
+
+    // Auto-focus amount field when creating new expense (on web especially)
+    if (widget.expense == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _amountFocusNode.requestFocus();
+        }
+      });
+    }
   }
 
   @override
@@ -789,10 +798,24 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisSize: MainAxisSize.min,
               children: [
-              // Title
-              Text(
-                isEditing ? 'تعديل مصروف' : 'إضافة مصروف',
-                style: Theme.of(context).textTheme.headlineSmall,
+              // Title with close button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isEditing ? 'تعديل مصروف' : 'إضافة مصروف',
+                    style: Theme.of(context).textTheme.headlineSmall,
+                  ),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: 'إغلاق',
+                      onPressed: _handleExit,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
 
@@ -866,6 +889,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 key: _amountFieldKey,
                 controller: _amountController,
                 focusNode: _amountFocusNode,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'المبلغ',
                   hintText: 'أدخل المبلغ',
@@ -962,6 +986,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 key: _merchantFieldKey,
                 controller: _merchantController,
                 focusNode: _merchantFocusNode,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'مكان الشراء',
                   hintText: 'مثال: Starbucks، Uber، Hotel ABC',
@@ -1050,6 +1075,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _paymentLabelController,
+                      textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
                         labelText: 'اسم البطاقة/المحفظة (اختياري)',
                         hintText: 'مثال: فرسان الراجحي',
@@ -1066,6 +1092,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 key: _locationFieldKey,
                 controller: _locationController,
                 focusNode: _locationFocusNode,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'موقع الشراء (اختياري)',
                   hintText: 'مثال: مطار إسطنبول، Taksim، Dubai Mall',
@@ -1079,6 +1106,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                 key: _noteFieldKey,
                 controller: _noteController,
                 focusNode: _noteFocusNode,
+                textInputAction: TextInputAction.done,
                 decoration: const InputDecoration(
                   labelText: 'ملاحظات (اختياري)',
                   hintText: 'أضف ملاحظات عن هذا المصروف',

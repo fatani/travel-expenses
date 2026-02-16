@@ -44,10 +44,14 @@ class ExpenseListPage extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  tooltip: 'فلترة',
-                  onPressed: () => _showFiltersSheet(context),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    tooltip: 'فلترة',
+                    onPressed: () => _showFiltersSheet(context),
+                  ),
                 ),
               ],
             ),
@@ -457,25 +461,35 @@ class _ExpenseListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final locationText = expense.locationText?.trim();
     return ListTile(
-      title: Text('${expense.amount} ${expense.currency} • ${expense.category}'),
+      title: Text(
+        '${expense.amount} ${expense.currency} • ${expense.category}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             expense.merchant,
             style: const TextStyle(fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           if (locationText != null && locationText.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               '📍 $locationText',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
           const SizedBox(height: 4),
           Text(
             _formatPaymentLine(),
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),

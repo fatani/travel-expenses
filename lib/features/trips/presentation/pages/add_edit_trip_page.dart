@@ -19,6 +19,7 @@ class AddEditTripPage extends ConsumerStatefulWidget {
 class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _nameFocusNode = FocusNode();
   String? _selectedCurrency = 'SAR';
   DateTime? _startDate;
   DateTime? _endDate;
@@ -27,8 +28,22 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
   Trip? _editingTrip;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-focus name field when creating new trip (on web especially)
+    if (widget.tripId == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _nameFocusNode.requestFocus();
+        }
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
+    _nameFocusNode.dispose();
     super.dispose();
   }
 
@@ -148,6 +163,8 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
               // اسم الرحلة
               TextFormField(
                 controller: _nameController,
+                focusNode: _nameFocusNode,
+                textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
                   labelText: 'اسم الرحلة',
                   border: OutlineInputBorder(),
@@ -198,10 +215,14 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    tooltip: 'اختيار تاريخ البداية',
-                    onPressed: () => _selectDate(context, true),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      tooltip: 'اختيار تاريخ البداية',
+                      onPressed: () => _selectDate(context, true),
+                    ),
                   ),
                 ],
               ),
@@ -218,10 +239,14 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.calendar_today),
-                    tooltip: 'اختيار تاريخ الانتهاء',
-                    onPressed: () => _selectDate(context, false),
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.calendar_today),
+                      tooltip: 'اختيار تاريخ الانتهاء',
+                      onPressed: () => _selectDate(context, false),
+                    ),
                   ),
                 ],
               ),
