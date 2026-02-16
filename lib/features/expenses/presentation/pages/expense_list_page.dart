@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/widgets/empty_state.dart';
-import '../../../../core/widgets/error_state.dart';
+import '../../../../core/widgets/app_empty_state.dart';
+import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/models/expense.dart';
 import '../providers/expense_filters_provider.dart';
 import '../providers/expenses_providers.dart';
@@ -55,47 +55,42 @@ class ExpenseListPage extends ConsumerWidget {
           Expanded(
             child: filteredExpensesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stackTrace) => ErrorState(
-                title: 'حدث خطأ أثناء تحميل البيانات.',
-                actionLabel: 'إعادة المحاولة',
-                onAction: () {
-                  ref.invalidate(filteredExpensesProvider(tripId));
-                  ref.invalidate(watchExpensesByTripProvider(tripId));
-                },
-              ),
+              error: (error, stackTrace) {
+                debugPrint('[ERR][expenses][list]: $error');
+                debugPrint('$stackTrace');
+                return AppErrorState(
+                  title: 'تعذر تحميل المصاريف',
+                  message: 'حدث خطأ غير متوقع. يمكنك المحاولة مرة أخرى.',
+                  onRetry: () {
+                    ref.invalidate(filteredExpensesProvider(tripId));
+                    ref.invalidate(watchExpensesByTripProvider(tripId));
+                  },
+                );
+              },
               data: (expenses) {
                 final originalExpenses = originalExpensesAsync.asData?.value;
                 if (expenses.isEmpty) {
                   if (originalExpenses == null || originalExpenses.isEmpty) {
-                    return const EmptyState(
+                    return AppEmptyState(
                       icon: Icons.receipt_long,
-                      title: 'لا توجد مصاريف بعد',
-                      subtitle: 'أضف أول مصروف لتظهر البيانات هنا.',
+                      title: 'لا توجد مصاريف',
+                      message: 'أضف أول مصروف لهذه الرحلة.',
+                      action: ElevatedButton(
+                        onPressed: () => _showAddExpenseSheet(context, ref),
+                        child: const Text('إضافة مصروف'),
+                      ),
                     );
                   }
                   // Has expenses but filtered results are empty
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.search_off, size: 48, color: Colors.grey[500]),
-                          const SizedBox(height: 12),
-                          Text(
-                            'لا توجد نتائج مطابقة',
-                            style: Theme.of(context).textTheme.titleMedium,
-                            textDirection: TextDirection.rtl,
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: () {
-                              ref.read(expenseFiltersProvider(tripId).notifier).reset();
-                            },
-                            child: const Text('مسح البحث وإعادة الضبط'),
-                          ),
-                        ],
-                      ),
+                  return AppEmptyState(
+                    icon: Icons.search_off,
+                    title: 'لا توجد نتائج مطابقة',
+                    message: 'جرّب تعديل البحث أو إعادة ضبط الفلاتر.',
+                    action: ElevatedButton(
+                      onPressed: () {
+                        ref.read(expenseFiltersProvider(tripId).notifier).reset();
+                      },
+                      child: const Text('إعادة ضبط'),
                     ),
                   );
                 }

@@ -6,6 +6,7 @@ import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../expenses/presentation/providers/expenses_providers.dart';
+import '../../../expenses/presentation/pages/add_edit_expense_page.dart';
 import '../../providers/trip_csv_export_provider.dart';
 import '../utils/csv_downloader.dart';
 
@@ -13,9 +14,11 @@ import '../utils/csv_downloader.dart';
 /// Allows users to download trip expenses as CSV.
 class TripExportTab extends ConsumerStatefulWidget {
   final String tripId;
+  final String tripCurrency;
 
   const TripExportTab({
     required this.tripId,
+    required this.tripCurrency,
     super.key,
   });
 
@@ -70,6 +73,24 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
     }
   }
 
+  void _showAddExpenseSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: AddEditExpensePage(
+            tripId: widget.tripId,
+            tripCurrency: widget.tripCurrency,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final expensesAsync = ref.watch(watchExpensesByTripProvider(widget.tripId));
@@ -86,14 +107,15 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
         );
       },
       data: (expenses) {
-        final isEmpty = expenses.isEmpty;
-        final statusMessage = isEmpty ? 'لا توجد مصاريف لتصديرها.' : _message;
-
-        if (isEmpty) {
+        if (expenses.isEmpty) {
           return AppEmptyState(
-            icon: Icons.download,
-            title: 'لا توجد مصاريف لتصديرها',
-            message: 'أضف مصاريف لتتمكن من تصديرها.',
+            icon: Icons.file_download_outlined,
+            title: 'لا يوجد ما يمكن تصديره',
+            message: 'أضف مصاريف للرحلة ثم صدّر ملف CSV.',
+            action: ElevatedButton(
+              onPressed: () => _showAddExpenseSheet(context),
+              child: const Text('إضافة مصروف'),
+            ),
           );
         }
 
@@ -136,7 +158,7 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
 
               // Export button
               ElevatedButton(
-                onPressed: _isLoading || isEmpty ? null : _handleExport,
+                onPressed: _isLoading ? null : _handleExport,
                 child: const Text('تصدير CSV'),
               ),
               if (_isLoading) ...[
@@ -153,27 +175,27 @@ class _TripExportTabState extends ConsumerState<TripExportTab> {
               const SizedBox(height: 16.0),
 
               // Status message
-              if (statusMessage != null)
+              if (_message != null)
                 Container(
                   padding: const EdgeInsets.all(12.0),
                   decoration: BoxDecoration(
-                    color: statusMessage.contains('خطأ') ||
-                            statusMessage.contains('تعذر')
+                    color: _message!.contains('خطأ') ||
+                            _message!.contains('تعذر')
                         ? Colors.red[50]
                         : Colors.green[50],
                     borderRadius: BorderRadius.circular(8.0),
                     border: Border.all(
-                      color: statusMessage.contains('خطأ') ||
-                              statusMessage.contains('تعذر')
+                      color: _message!.contains('خطأ') ||
+                              _message!.contains('تعذر')
                           ? Colors.red[200]!
                           : Colors.green[200]!,
                     ),
                   ),
                   child: Text(
-                    statusMessage,
+                    _message!,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: statusMessage.contains('خطأ') ||
-                                  statusMessage.contains('تعذر')
+                          color: _message!.contains('خطأ') ||
+                                  _message!.contains('تعذر')
                               ? Colors.red[800]
                               : Colors.green[800],
                         ),

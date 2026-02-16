@@ -10,6 +10,7 @@ import '../../../../core/widgets/app_empty_state.dart';
 import '../../../expenses/presentation/models/trip_summary.dart';
 import '../../../expenses/presentation/providers/expense_filters_provider.dart';
 import '../../../expenses/presentation/pages/expense_list_page.dart';
+import '../../../expenses/presentation/pages/add_edit_expense_page.dart';
 import '../../../expenses/presentation/providers/trip_summary_provider.dart';
 import '../../../expenses/presentation/providers/expenses_providers.dart';
 import '../../../export/presentation/widgets/trip_export_tab.dart';
@@ -78,8 +79,14 @@ class TripDetailsPage extends ConsumerWidget {
                         tripId: trip.id,
                         tripCurrency: trip.defaultCurrency,
                       ),
-                      _SummaryTabContent(tripId: trip.id),
-                      TripExportTab(tripId: trip.id),
+                      _SummaryTabContent(
+                        tripId: trip.id,
+                        tripCurrency: trip.defaultCurrency,
+                      ),
+                      TripExportTab(
+                        tripId: trip.id,
+                        tripCurrency: trip.defaultCurrency,
+                      ),
                     ],
                   ),
                 ),
@@ -162,8 +169,12 @@ class _ExpensesTabContent extends StatelessWidget {
 
 class _SummaryTabContent extends ConsumerWidget {
   final String tripId;
+  final String tripCurrency;
 
-  const _SummaryTabContent({required this.tripId});
+  const _SummaryTabContent({
+    required this.tripId,
+    required this.tripCurrency,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -186,7 +197,11 @@ class _SummaryTabContent extends ConsumerWidget {
           return AppEmptyState(
             icon: Icons.pie_chart_outline,
             title: 'لا يوجد ملخص بعد',
-            message: 'أضف مصاريف لعرض الإجمالي والتوزيعات.',
+            message: 'سيظهر الملخص هنا بعد إضافة مصاريف.',
+            action: ElevatedButton(
+              onPressed: () => _showAddExpenseSheet(context, tripCurrency),
+              child: const Text('إضافة مصروف'),
+            ),
           );
         }
 
@@ -209,6 +224,24 @@ class _SummaryTabContent extends ConsumerWidget {
                   _ByDayCard(summary: summary, expenses: expenses),
                 ],
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showAddExpenseSheet(BuildContext context, String tripCurrency) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: AddEditExpensePage(
+            tripId: tripId,
+            tripCurrency: tripCurrency,
           ),
         );
       },

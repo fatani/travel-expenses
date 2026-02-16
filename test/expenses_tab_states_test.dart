@@ -39,7 +39,7 @@ void main() {
       createdAt: DateTime(2026, 2, 2, 14, 30),
     );
 
-    testWidgets('Empty state: shows "لا توجد مصاريف بعد" when no expenses',
+    testWidgets('Empty state: shows "لا توجد مصاريف" when no expenses',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -62,8 +62,8 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify empty state message appears
-      expect(find.text('لا توجد مصاريف بعد'), findsOneWidget);
-      expect(find.text('أضف أول مصروف لتظهر البيانات هنا.'), findsOneWidget);
+      expect(find.text('لا توجد مصاريف'), findsOneWidget);
+      expect(find.text('أضف أول مصروف لهذه الرحلة.'), findsOneWidget);
     });
 
     testWidgets(
@@ -99,7 +99,7 @@ void main() {
 
       // Verify no-match message appears
       expect(find.text('لا توجد نتائج مطابقة'), findsOneWidget);
-      expect(find.text('مسح البحث وإعادة الضبط'), findsOneWidget);
+      expect(find.text('إعادة ضبط'), findsOneWidget);
 
       // Verify base expenses are not shown
       expect(find.text('Restaurant A'), findsNothing);
@@ -142,7 +142,7 @@ void main() {
       expect(find.text('Restaurant A'), findsNothing);
 
       // Find and tap the reset button
-      final resetButton = find.text('مسح البحث وإعادة الضبط');
+      final resetButton = find.text('إعادة ضبط');
       expect(resetButton, findsOneWidget);
 
       await tester.tap(resetButton);
