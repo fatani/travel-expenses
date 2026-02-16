@@ -114,10 +114,11 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _paymentLabelController = TextEditingController(
         text: widget.expense!.paymentMethodLabel ?? '',
       );
+      _smsInputController = TextEditingController();
       _selectedCategory = widget.expense!.category;
       _selectedCurrency = widget.expense!.currency;
       _selectedPaymentMethod = widget.expense!.paymentMethod;
-      _selectedPaymentBrand = widget.expense!.paymentMethodBrand;
+      _selectedPaymentBrand = canonicalBrand(widget.expense!.paymentMethodBrand);
       _selectedDate = widget.expense!.date;
     } else {
       _amountController = TextEditingController();
@@ -198,10 +199,10 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       if (!_shouldShowPaymentDetails(value)) {
         _resetPaymentDetails();
       } else {
-        final brands = _getBrandOptions();
-        if (_selectedPaymentBrand != null && !brands.containsKey(_selectedPaymentBrand)) {
-          _selectedPaymentBrand = null;
-        }
+        final options = _buildBrandOptions();
+        final normalized = canonicalBrand(_selectedPaymentBrand);
+        _selectedPaymentBrand =
+            normalized != null && options.contains(normalized) ? normalized : null;
       }
     });
     if (persist) {
@@ -252,7 +253,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       _selectedPaymentMethod = draft.paymentMethodType!;
     }
     if (draft.paymentBrand != null) {
-      _selectedPaymentBrand = draft.paymentBrand;
+      _selectedPaymentBrand = canonicalBrand(draft.paymentBrand);
     }
     if (draft.date != null) {
       _selectedDate = draft.date!;
@@ -262,10 +263,10 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
     if (!_shouldShowPaymentDetails(_selectedPaymentMethod)) {
       _resetPaymentDetails();
     } else {
-      final brands = _getBrandOptions();
-      if (_selectedPaymentBrand != null && !brands.containsKey(_selectedPaymentBrand)) {
-        _selectedPaymentBrand = null;
-      }
+      final options = _buildBrandOptions();
+      final normalized = canonicalBrand(_selectedPaymentBrand);
+      _selectedPaymentBrand =
+          normalized != null && options.contains(normalized) ? normalized : null;
     }
   }
 
@@ -281,7 +282,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
           ? null
           : _merchantController.text.trim(),
       paymentMethodType: _selectedPaymentMethod,
-      paymentBrand: _selectedPaymentBrand,
+        paymentBrand: canonicalBrand(_selectedPaymentBrand),
       paymentLabel: _paymentLabelController.text.trim().isEmpty
           ? null
           : _paymentLabelController.text.trim(),
@@ -315,6 +316,31 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       return _walletBrands;
     }
     return const {};
+  }
+
+  List<String> _buildBrandOptions() {
+    final rawOptions = _getBrandOptions().keys.toList();
+    final normalized = <String>{};
+    for (final option in rawOptions) {
+      final canonical = canonicalBrand(option);
+      if (canonical != null) {
+        normalized.add(canonical);
+      }
+    }
+    final list = normalized.toList()..sort();
+    return list;
+  }
+
+  String? _safeSelectedBrand(List<String> options) {
+    final current = canonicalBrand(_selectedPaymentBrand);
+    if (current != null && options.contains(current)) {
+      return current;
+    }
+    return null;
+  }
+
+  String _brandLabel(String value) {
+    return _cardBrands[value] ?? _walletBrands[value] ?? value.replaceAll('_', ' ');
   }
 
   Future<void> _focusAndScroll(GlobalKey targetKey, FocusNode focusNode) async {
@@ -631,9 +657,20 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       }
     }
 
-    if (result.paymentBrand != null) {
+    final normalizedBrand = canonicalBrand(result.paymentBrand);
+    final brandOptions = _buildBrandOptions();
+    final safeBrand =
+        normalizedBrand != null && brandOptions.contains(normalizedBrand)
+            ? normalizedBrand
+            : null;
+
+    print('SMS normalized brand: $normalizedBrand');
+    print('SMS safe dropdown value: $safeBrand');
+    print('SMS parsed date: ${result.dateTime}');
+
+    if (safeBrand != null && _shouldShowPaymentDetails(_selectedPaymentMethod)) {
       setState(() {
-        _selectedPaymentBrand = result.paymentBrand;
+        _selectedPaymentBrand = safeBrand;
       });
     }
 
@@ -730,6 +767,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
       ? ref.watch(watchReceiptsByExpenseProvider(expenseId))
       : const AsyncValue.data(<Receipt>[]);
     final ocrSuggestionAsync = ref.watch(ocrSuggestionProvider(draftKey));
+    final brandOptions = _buildBrandOptions();
+    final safeBrand = _safeSelectedBrand(brandOptions);
 
     return PopScope(
       canPop: false,
@@ -989,16 +1028,15 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                   if (_shouldShowPaymentDetails(_selectedPaymentMethod)) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: _selectedPaymentBrand,
+                      value: safeBrand,
                       decoration: const InputDecoration(
                         labelText: 'علامة البطاقة/المحفظة (اختياري)',
                         prefixIcon: Icon(Icons.credit_card),
                       ),
-                      items: _getBrandOptions()
-                          .entries
-                          .map((entry) => DropdownMenuItem(
-                                value: entry.key,
-                                child: Text(entry.value),
+                      items: brandOptions
+                          .map((value) => DropdownMenuItem(
+                                value: value,
+                                child: Text(_brandLabel(value)),
                               ))
                           .toList(),
                       onChanged: (value) {
