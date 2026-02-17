@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/app_empty_state.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/models/expense.dart';
+import '../../../../core/utils/date_time_format.dart';
 import '../providers/expense_filters_provider.dart';
 import '../providers/expenses_providers.dart';
 import '../providers/filtered_expenses_provider.dart';
@@ -469,6 +470,13 @@ class _ExpenseListItem extends StatelessWidget {
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            formatDateTimeUi(expense.date),
+            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
           Text(
             expense.merchant,
             style: const TextStyle(fontWeight: FontWeight.w600),

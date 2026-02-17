@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/models/trip.dart';
 import '../../../../core/models/expense.dart';
+import '../../../../core/utils/date_time_format.dart';
 import '../../../../core/widgets/app_loading.dart';
 import '../../../../core/widgets/app_error_state.dart';
 import '../../../../core/widgets/app_empty_state.dart';
@@ -136,16 +137,12 @@ class _HeaderCard extends StatelessWidget {
       return null;
     }
     if (start != null && end != null) {
-      return '${_formatDate(start)} - ${_formatDate(end)}';
+      return '${formatDate(start)} - ${formatDate(end)}';
     }
     if (start != null) {
-      return _formatDate(start);
+      return formatDate(start);
     }
-    return _formatDate(end!);
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return formatDate(end!);
   }
 }
 
@@ -426,7 +423,7 @@ class _ByDayCard extends StatelessWidget {
             const SizedBox(height: 12),
             ...displayDays.map(
               (entry) {
-                final dayStr = _formatDate(entry.key);
+                final dayStr = formatDate(entry.key);
                 final currenciesForDay =
                     dayByAmount[dayStr]?.entries.toList() ?? [];
                 currenciesForDay.sort((a, b) => b.value.compareTo(a.value));

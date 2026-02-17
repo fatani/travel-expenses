@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/models/expense.dart';
 import '../../../../core/models/receipt.dart';
+import '../../../../core/utils/date_time_format.dart';
 import '../../../receipts/presentation/providers/receipts_providers.dart';
 import '../../../receipts/presentation/widgets/receipt_gallery.dart';
 import '../models/expense_draft.dart';
@@ -974,7 +975,7 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                       prefixIcon: Icon(Icons.calendar_today),
                     ),
                     child: Text(
-                      '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}',
+                      formatDateTimeUi(_selectedDate),
                     ),
                   ),
                 ),
