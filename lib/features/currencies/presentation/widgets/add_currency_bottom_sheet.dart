@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/currencies_provider.dart';
 
 class AddCurrencyBottomSheet extends ConsumerStatefulWidget {
-  final VoidCallback? onCurrencyAdded;
+  final ValueChanged<String?>? onCurrencyAdded;
 
   const AddCurrencyBottomSheet({
     super.key,
@@ -64,9 +64,10 @@ class _AddCurrencyBottomSheetState extends ConsumerState<AddCurrencyBottomSheet>
         return;
       }
 
-      // Success
+      // Success: notify caller with the added currency code, then close
       if (mounted) {
-        widget.onCurrencyAdded?.call();
+        final addedCode = _codeController.text.toUpperCase().trim();
+        widget.onCurrencyAdded?.call(addedCode);
         Navigator.pop(context);
       }
     } finally {

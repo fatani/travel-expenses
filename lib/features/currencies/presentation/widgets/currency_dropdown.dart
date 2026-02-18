@@ -24,7 +24,13 @@ class CurrencyDropdown extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (ctx) => const AddCurrencyBottomSheet(),
+      builder: (ctx) => AddCurrencyBottomSheet(
+        onCurrencyAdded: (code) {
+          if (code != null) {
+            onChanged(code);
+          }
+        },
+      ),
     );
   }
 
