@@ -24,12 +24,7 @@ class CurrencyDropdown extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => AddCurrencyBottomSheet(
-        onCurrencyAdded: () {
-          // Refresh currencies when new one is added
-          Navigator.pop(context); // Close bottom sheet
-        },
-      ),
+      builder: (ctx) => const AddCurrencyBottomSheet(),
     );
   }
 
@@ -78,14 +73,16 @@ class CurrencyDropdown extends ConsumerWidget {
             DropdownMenuItem<String>(
               enabled: true,
               value: '_ADD_NEW_',
-              onTap: () {
-                _showAddCurrencySheet(context, ref);
-              },
               child: const Text('➕ إضافة عملة جديدة'),
             ),
           ],
           onChanged: (value) {
-            if (value != null && value != '_ADD_NEW_') {
+            if (value == '_ADD_NEW_') {
+              _showAddCurrencySheet(context, ref);
+              return;
+            }
+
+            if (value != null) {
               onChanged(value);
             }
           },
