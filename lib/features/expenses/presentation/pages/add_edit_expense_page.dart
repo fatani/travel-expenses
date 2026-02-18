@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../../core/models/expense.dart';
 import '../../../../core/models/receipt.dart';
 import '../../../../core/utils/date_time_format.dart';
+import '../../../../features/currencies/presentation/widgets/currency_dropdown.dart';
 import '../../../receipts/presentation/providers/receipts_providers.dart';
 import '../../../receipts/presentation/widgets/receipt_gallery.dart';
 import '../models/expense_draft.dart';
@@ -912,17 +913,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
               const SizedBox(height: 16),
 
               // Currency field
-              DropdownButtonFormField<String>(
-                key: _currencyFieldKey,
-                focusNode: _currencyFocusNode,
-                value: _selectedCurrency,
-                decoration: const InputDecoration(
-                  labelText: 'العملة',
-                  prefixIcon: Icon(Icons.currency_exchange),
-                ),
-                items: ['USD', 'EUR', 'GBP', 'SAR', 'AED', 'KWD', 'QAR']
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
+              CurrencyDropdown(
+                selectedCurrency: _selectedCurrency,
                 onChanged: (value) {
                   if (value != null) {
                     setState(() {
@@ -931,6 +923,8 @@ class _AddEditExpensePageState extends ConsumerState<AddEditExpensePage> {
                     _updateDraft();
                   }
                 },
+                labelText: 'العملة',
+                isRequired: true,
               ),
               const SizedBox(height: 16),
 

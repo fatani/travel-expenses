@@ -1,8 +1,10 @@
 import 'package:drift/drift.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../features/trips/data/models/trip_table.dart' as trip_table;
 import '../../features/trips/data/models/expense_table.dart' as expense_table;
 import '../../features/trips/data/models/receipt_table.dart' as receipt_table;
+import '../../features/currencies/data/models/currency_table.dart' as currency_table;
 
 part 'app_database.g.dart';
 
@@ -11,6 +13,7 @@ part 'app_database.g.dart';
     trip_table.TripsTable,
     expense_table.ExpensesTable,
     receipt_table.ReceiptsTable,
+    currency_table.CurrenciesTable,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -27,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -76,8 +79,44 @@ class AppDatabase extends _$AppDatabase {
           await m.addColumn(expensesTable, expensesTable.paymentMethodLabel);
         }
       }
+
+      if (from <= 5 && to >= 6) {
+        // Create currencies table
+        await m.createTable(currenciesTable);
+        // Seed default currencies
+        await _seedDefaultCurrencies();
+      }
+    },
+    onCreate: (m) async {
+      await m.createAllTables();
+      await _seedDefaultCurrencies();
     },
   );
+
+  Future<void> _seedDefaultCurrencies() async {
+    final defaultCurrencies = [
+      (code: 'SAR', name: 'ريال سعودي', symbol: '﷼'),
+      (code: 'USD', name: 'US Dollar', symbol: '\$'),
+      (code: 'EUR', name: 'Euro', symbol: '€'),
+    ];
+
+    for (final currency in defaultCurrencies) {
+      try {
+        await into(currenciesTable).insert(
+          CurrenciesTableCompanion(
+            id: Value('${currency.code}_${DateTime.now().millisecondsSinceEpoch}'),
+            code: Value(currency.code),
+            name: Value(currency.name),
+            symbol: Value(currency.symbol),
+            createdAt: Value(DateTime.now()),
+          ),
+        );
+      } catch (e) {
+        // Ignore if already exists (unique constraint)
+        debugPrint('[currencies] seed insert failed for ${currency.code}: $e');
+      }
+    }
+  }
 
   // Trips Operations
   Future<List<TripsTableData>> getAllTrips() => select(tripsTable).get();
@@ -151,5 +190,27 @@ class AppDatabase extends _$AppDatabase {
     await deleteReceiptsByTrip(tripId);
     await deleteExpensesByTrip(tripId);
     await deleteTrip(tripId);
+  }
+
+  // Currencies Operations
+  Future<List<CurrenciesTableData>> getAllCurrencies() {
+    return select(currenciesTable).get();
+  }
+
+  Stream<List<CurrenciesTableData>> watchAllCurrencies() {
+    return select(currenciesTable).watch();
+  }
+
+  Future<void> insertCurrency(CurrenciesTableCompanion currency) {
+    return into(currenciesTable).insert(currency);
+  }
+
+  Future<CurrenciesTableData?> getCurrencyByCode(String code) {
+    return (select(currenciesTable)..where((c) => c.code.equals(code))).getSingleOrNull();
+  }
+
+  Future<bool> currencyCodeExists(String code) async {
+    final result = await (select(currenciesTable)..where((c) => c.code.equals(code))).getSingleOrNull();
+    return result != null;
   }
 }

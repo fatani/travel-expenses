@@ -1594,12 +1594,371 @@ class ReceiptsTableCompanion extends UpdateCompanion<ReceiptsTableData> {
   }
 }
 
+class $CurrenciesTableTable extends currency_table.CurrenciesTable
+    with TableInfo<$CurrenciesTableTable, CurrenciesTableData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $CurrenciesTableTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _codeMeta = const VerificationMeta('code');
+  @override
+  late final GeneratedColumn<String> code = GeneratedColumn<String>(
+    'code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _symbolMeta = const VerificationMeta('symbol');
+  @override
+  late final GeneratedColumn<String> symbol = GeneratedColumn<String>(
+    'symbol',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, code, name, symbol, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'currencies_table';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<CurrenciesTableData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('code')) {
+      context.handle(
+        _codeMeta,
+        code.isAcceptableOrUnknown(data['code']!, _codeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_codeMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('symbol')) {
+      context.handle(
+        _symbolMeta,
+        symbol.isAcceptableOrUnknown(data['symbol']!, _symbolMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  CurrenciesTableData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return CurrenciesTableData(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}id'],
+          )!,
+      code:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}code'],
+          )!,
+      name:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}name'],
+          )!,
+      symbol: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}symbol'],
+      ),
+      createdAt:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}created_at'],
+          )!,
+    );
+  }
+
+  @override
+  $CurrenciesTableTable createAlias(String alias) {
+    return $CurrenciesTableTable(attachedDatabase, alias);
+  }
+}
+
+class CurrenciesTableData extends DataClass
+    implements Insertable<CurrenciesTableData> {
+  final String id;
+  final String code;
+  final String name;
+  final String? symbol;
+  final DateTime createdAt;
+  const CurrenciesTableData({
+    required this.id,
+    required this.code,
+    required this.name,
+    this.symbol,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['code'] = Variable<String>(code);
+    map['name'] = Variable<String>(name);
+    if (!nullToAbsent || symbol != null) {
+      map['symbol'] = Variable<String>(symbol);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  CurrenciesTableCompanion toCompanion(bool nullToAbsent) {
+    return CurrenciesTableCompanion(
+      id: Value(id),
+      code: Value(code),
+      name: Value(name),
+      symbol:
+          symbol == null && nullToAbsent ? const Value.absent() : Value(symbol),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory CurrenciesTableData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return CurrenciesTableData(
+      id: serializer.fromJson<String>(json['id']),
+      code: serializer.fromJson<String>(json['code']),
+      name: serializer.fromJson<String>(json['name']),
+      symbol: serializer.fromJson<String?>(json['symbol']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'code': serializer.toJson<String>(code),
+      'name': serializer.toJson<String>(name),
+      'symbol': serializer.toJson<String?>(symbol),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  CurrenciesTableData copyWith({
+    String? id,
+    String? code,
+    String? name,
+    Value<String?> symbol = const Value.absent(),
+    DateTime? createdAt,
+  }) => CurrenciesTableData(
+    id: id ?? this.id,
+    code: code ?? this.code,
+    name: name ?? this.name,
+    symbol: symbol.present ? symbol.value : this.symbol,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  CurrenciesTableData copyWithCompanion(CurrenciesTableCompanion data) {
+    return CurrenciesTableData(
+      id: data.id.present ? data.id.value : this.id,
+      code: data.code.present ? data.code.value : this.code,
+      name: data.name.present ? data.name.value : this.name,
+      symbol: data.symbol.present ? data.symbol.value : this.symbol,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurrenciesTableData(')
+          ..write('id: $id, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('symbol: $symbol, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, code, name, symbol, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is CurrenciesTableData &&
+          other.id == this.id &&
+          other.code == this.code &&
+          other.name == this.name &&
+          other.symbol == this.symbol &&
+          other.createdAt == this.createdAt);
+}
+
+class CurrenciesTableCompanion extends UpdateCompanion<CurrenciesTableData> {
+  final Value<String> id;
+  final Value<String> code;
+  final Value<String> name;
+  final Value<String?> symbol;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const CurrenciesTableCompanion({
+    this.id = const Value.absent(),
+    this.code = const Value.absent(),
+    this.name = const Value.absent(),
+    this.symbol = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  CurrenciesTableCompanion.insert({
+    required String id,
+    required String code,
+    required String name,
+    this.symbol = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       code = Value(code),
+       name = Value(name),
+       createdAt = Value(createdAt);
+  static Insertable<CurrenciesTableData> custom({
+    Expression<String>? id,
+    Expression<String>? code,
+    Expression<String>? name,
+    Expression<String>? symbol,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (code != null) 'code': code,
+      if (name != null) 'name': name,
+      if (symbol != null) 'symbol': symbol,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  CurrenciesTableCompanion copyWith({
+    Value<String>? id,
+    Value<String>? code,
+    Value<String>? name,
+    Value<String?>? symbol,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return CurrenciesTableCompanion(
+      id: id ?? this.id,
+      code: code ?? this.code,
+      name: name ?? this.name,
+      symbol: symbol ?? this.symbol,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (code.present) {
+      map['code'] = Variable<String>(code.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (symbol.present) {
+      map['symbol'] = Variable<String>(symbol.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('CurrenciesTableCompanion(')
+          ..write('id: $id, ')
+          ..write('code: $code, ')
+          ..write('name: $name, ')
+          ..write('symbol: $symbol, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
   late final $TripsTableTable tripsTable = $TripsTableTable(this);
   late final $ExpensesTableTable expensesTable = $ExpensesTableTable(this);
   late final $ReceiptsTableTable receiptsTable = $ReceiptsTableTable(this);
+  late final $CurrenciesTableTable currenciesTable = $CurrenciesTableTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1608,6 +1967,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     tripsTable,
     expensesTable,
     receiptsTable,
+    currenciesTable,
   ];
 }
 
@@ -2429,6 +2789,230 @@ typedef $$ReceiptsTableTableProcessedTableManager =
       ReceiptsTableData,
       PrefetchHooks Function()
     >;
+typedef $$CurrenciesTableTableCreateCompanionBuilder =
+    CurrenciesTableCompanion Function({
+      required String id,
+      required String code,
+      required String name,
+      Value<String?> symbol,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$CurrenciesTableTableUpdateCompanionBuilder =
+    CurrenciesTableCompanion Function({
+      Value<String> id,
+      Value<String> code,
+      Value<String> name,
+      Value<String?> symbol,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$CurrenciesTableTableFilterComposer
+    extends Composer<_$AppDatabase, $CurrenciesTableTable> {
+  $$CurrenciesTableTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$CurrenciesTableTableOrderingComposer
+    extends Composer<_$AppDatabase, $CurrenciesTableTable> {
+  $$CurrenciesTableTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get code => $composableBuilder(
+    column: $table.code,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get symbol => $composableBuilder(
+    column: $table.symbol,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$CurrenciesTableTableAnnotationComposer
+    extends Composer<_$AppDatabase, $CurrenciesTableTable> {
+  $$CurrenciesTableTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get code =>
+      $composableBuilder(column: $table.code, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get symbol =>
+      $composableBuilder(column: $table.symbol, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$CurrenciesTableTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $CurrenciesTableTable,
+          CurrenciesTableData,
+          $$CurrenciesTableTableFilterComposer,
+          $$CurrenciesTableTableOrderingComposer,
+          $$CurrenciesTableTableAnnotationComposer,
+          $$CurrenciesTableTableCreateCompanionBuilder,
+          $$CurrenciesTableTableUpdateCompanionBuilder,
+          (
+            CurrenciesTableData,
+            BaseReferences<
+              _$AppDatabase,
+              $CurrenciesTableTable,
+              CurrenciesTableData
+            >,
+          ),
+          CurrenciesTableData,
+          PrefetchHooks Function()
+        > {
+  $$CurrenciesTableTableTableManager(
+    _$AppDatabase db,
+    $CurrenciesTableTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () =>
+                  $$CurrenciesTableTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () => $$CurrenciesTableTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer:
+              () => $$CurrenciesTableTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> code = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<String?> symbol = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => CurrenciesTableCompanion(
+                id: id,
+                code: code,
+                name: name,
+                symbol: symbol,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String code,
+                required String name,
+                Value<String?> symbol = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => CurrenciesTableCompanion.insert(
+                id: id,
+                code: code,
+                name: name,
+                symbol: symbol,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$CurrenciesTableTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $CurrenciesTableTable,
+      CurrenciesTableData,
+      $$CurrenciesTableTableFilterComposer,
+      $$CurrenciesTableTableOrderingComposer,
+      $$CurrenciesTableTableAnnotationComposer,
+      $$CurrenciesTableTableCreateCompanionBuilder,
+      $$CurrenciesTableTableUpdateCompanionBuilder,
+      (
+        CurrenciesTableData,
+        BaseReferences<
+          _$AppDatabase,
+          $CurrenciesTableTable,
+          CurrenciesTableData
+        >,
+      ),
+      CurrenciesTableData,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2439,4 +3023,6 @@ class $AppDatabaseManager {
       $$ExpensesTableTableTableManager(_db, _db.expensesTable);
   $$ReceiptsTableTableTableManager get receiptsTable =>
       $$ReceiptsTableTableTableManager(_db, _db.receiptsTable);
+  $$CurrenciesTableTableTableManager get currenciesTable =>
+      $$CurrenciesTableTableTableManager(_db, _db.currenciesTable);
 }

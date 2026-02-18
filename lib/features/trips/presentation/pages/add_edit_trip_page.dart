@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/models/trip.dart';
+import '../../../../features/currencies/presentation/widgets/currency_dropdown.dart';
 import '../providers/trips_providers.dart';
 
 class AddEditTripPage extends ConsumerStatefulWidget {
@@ -179,28 +180,17 @@ class _AddEditTripPageState extends ConsumerState<AddEditTripPage> {
               const SizedBox(height: 16),
 
               // العملة الافتراضية
-              DropdownButtonFormField<String>(
-                value: _selectedCurrency,
-                decoration: const InputDecoration(
-                  labelText: 'العملة الافتراضية',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'SAR', child: Text('SAR (ريال سعودي)')),
-                  DropdownMenuItem(value: 'USD', child: Text('USD (دولار أمريكي)')),
-                  DropdownMenuItem(value: 'EUR', child: Text('EUR (يورو)')),
-                ],
+              CurrencyDropdown(
+                selectedCurrency: _selectedCurrency,
                 onChanged: (value) {
-                  setState(() {
-                    _selectedCurrency = value;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'اختر العملة';
+                  if (mounted) {
+                    setState(() {
+                      _selectedCurrency = value;
+                    });
                   }
-                  return null;
                 },
+                labelText: 'العملة الافتراضية',
+                isRequired: true,
               ),
               const SizedBox(height: 16),
 
