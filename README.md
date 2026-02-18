@@ -18,6 +18,21 @@ flutter test
 flutter analyze
 ```
 
+## What it does
+- تتبع مصاريف السفر لكل رحلة بعملة محددة
+- يعمل دون اتصال مع تصدير CSV للبيانات
+- واجهة عربية RTL مع أدوات إدخال ذكية
+
+## Data & Privacy
+- كل البيانات تُخزّن محليًا على الجهاز
+- لا يوجد تسجيل دخول
+- لا يوجد إرسال بيانات لسيرفر
+
+## Platforms
+- iOS
+- Android
+- Web (PWA)
+
 ## 📱 وصف التطبيق
 
 تطبيق لتتبع مصاريف السفر لكل رحلة، يعمل دون اتصال ويتيح تصدير CSV.
@@ -96,6 +111,146 @@ flutter test                     # جميع الاختبارات (54 اختبا�
 flutter test test/sms_*          # اختبارات محلل SMS فقط
 flutter test test/expense_draft* # اختبارات المسودات فقط
 ```
+
+## 📦 خطوات الإطلاق (Release)
+
+### تحضير البيئة
+```bash
+# تأكد من نظافة المشروع
+flutter clean
+flutter pub get
+
+# تحقق من الجودة قبل الإطلاق
+flutter analyze
+flutter test
+```
+
+### Web/PWA
+
+#### البناء
+```bash
+flutter build web --release
+```
+
+#### الاختبار المحلي
+```bash
+# تثبيت خادم ثابت (إذا لم يكن مثبتاً)
+dart pub global activate dhttpd
+
+# تشغيل الخادم من مجلد build
+dhttpd --path build/web --port 53111
+```
+ثم افتح: `http://localhost:53111`
+
+#### التحقق من PWA
+- ✅ يعمل بدون اتصال (offline)
+- ✅ التثبيت كتطبيق يعمل
+- ✅ لا توجد أخطاء console مخيفة
+- ✅ جميع المسارات تعمل (Trip list → Details → Add expense)
+
+**الملفات المهمة:**
+- `web/manifest.json` — PWA metadata
+- `web/index.html` — entry point
+- `build/web/flutter_service_worker.js` — caching
+
+### Android
+
+#### البناء
+
+```bash
+# بناء APK (للاختبار/التوزيع المباشر)
+flutter build apk --release
+
+# بناء App Bundle (لـ Google Play Store)
+flutter build appbundle --release
+```
+
+**المخرجات:**
+- APK: `build/app/outputs/flutter-apk/app-release.apk`
+- AAB: `build/app/outputs/bundle/release/app-release.aab`
+
+#### إعداد التوقيع (Signing)
+قبل النشر على Google Play:
+1. إنشاء keystore:
+```bash
+keytool -genkey -v -keystore ~/key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+```
+
+2. إنشاء ملف `android/key.properties`:
+```properties
+storePassword=your_store_password
+keyPassword=your_key_password
+keyAlias=upload
+storeFile=../key.jks
+```
+
+3. تحديث `android/app/build.gradle` لاستخدام التوقيع للإصدارات
+
+#### الملفات المهمة
+- `android/app/src/main/AndroidManifest.xml` — اسم التطبيق: "مصاريف السفر"
+- `android/app/build.gradle` — إصدار التطبيق والخصائص
+
+### iOS
+
+#### البناء بدون توقيع
+```bash
+flutter build ios --release --no-codesign
+```
+
+#### البناء مع التوقيع والأرشفة (لاحقاً)
+```bash
+# في Xcode
+open ios/Runner.xcworkspace
+# Product > Archive → Export
+```
+
+#### الملفات المهمة
+- `ios/Runner/Info.plist` — اسم التطبيق: "مصاريف السفر"
+- `ios/Podfile` — dependencies
+
+### 📋 Release Checklist
+
+**قبل الإطلاق:**
+- [ ] تشغيل `flutter analyze` — 0 أخطاء حرجة
+- [ ] تشغيل `flutter test` — 75/75 اختبار ✅
+- [ ] تحديث `pubspec.yaml` version إذا لزم الأمر
+
+**Web/PWA:**
+- [ ] `flutter build web --release` ✅
+- [ ] اختبار على localhost — الويب يعمل بدون اتصال ✅
+- [ ] PWA install يعمل
+- [ ] لا توجد console errors
+
+**Android:**
+- [ ] `flutter build apk --release` ✅
+- [ ] (اختياري) اختبار APK على الجهاز/محاكي
+- [ ] `flutter build appbundle --release` ✅
+- [ ] توقيع وإعداد Google Play (لاحقاً)
+
+**iOS:**
+- [ ] `flutter build ios --release --no-codesign` ✅
+- [ ] فتح Xcode وتأكيد البناء
+- [ ] إعداد AppStore Connect (لاحقاً)
+
+**Meta/Config:**
+- [ ] [x] اسم التطبيق محدث: "مصاريف السفر"
+- [ ] [x] الإصدار صحيح: 0.1.0
+- [ ] [x] الأيقونات موجودة على جميع المنصات
+
+### 🚀 نشر على المتاجر (خطوات مستقبلية)
+
+**Google Play Console:**
+1. إنشاء حساب Google Play Developer
+2. تحميل AAB مع الأيقونات والوصف
+3. إعداد في-play testing
+4. النشر إلى الإنتاج
+
+**App Store Connect:**
+1. إنشاء حساب Apple Developer
+2. توقيع البناء مع معرف الفريق
+3. تحميل الأرشيف باستخدام Transporter
+4. ملء معلومات المتجر والموارد
+5. إرسال للمراجعة
 
 ## البنية المعمارية
 
